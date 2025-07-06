@@ -728,7 +728,7 @@ onMounted(async () => {
 .search-input:focus {
     outline: none;
     border-color: var(--nlb-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .filter-chips {

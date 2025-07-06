@@ -33,11 +33,14 @@
                 </a>
             </template>
             <template #end>
-                <div class="user-info-sub">
-                    <div
-                        class="user-info"
-                        :class="{ 'easter-egg-active': easterEggActive }"
-                    >
+                                    <div class="user-info-sub">
+                        <div
+                            class="user-info"
+                            :class="{ 
+                                'easter-egg-active': easterEggActive,
+                                'click-progress': clickCount > 0 && clickCount < 5
+                            }"
+                        >
                         <i
                             :class="userIconClass"
                             @click="triggerEasterEgg"
@@ -45,14 +48,17 @@
                             :style="{
                                 transform: easterEggActive
                                     ? 'rotate(360deg) scale(1.2)'
+                                    : clickCount > 0 && clickCount < 5
+                                    ? `scale(${1 + clickCount * 0.05})`
                                     : '',
+                                opacity: clickCount > 0 && clickCount < 5 ? 0.7 + clickCount * 0.06 : 1,
                             }"
                         ></i>
-                        <span>{{
-                            easterEggActive
-                                ? easterEggMessage
-                                : `User ID: ${userId}`
-                        }}</span>
+                        <span 
+                            @click="handleMessageClick"
+                            :class="{ 'message-clicked': messageClicked }"
+                            class="easter-egg-message"
+                        >{{ easterEggMessage }}</span>
                     </div>
 
                     <div v-if="showConfetti" class="confetti-container">
@@ -117,6 +123,10 @@ const userId = store.state.user.id;
 const easterEggActive = ref(false);
 const showConfetti = ref(false);
 const clickCount = ref(0);
+const lastClickTime = ref(0);
+const clickTimeout = ref(null);
+const messageClicked = ref(false);
+const currentMessage = ref("");
 
 const easterEggMessages = [
     "You found me!",
@@ -140,8 +150,10 @@ const easterEggIcons = [
 ];
 
 const easterEggMessage = computed(() => {
-    const messageIndex = clickCount.value % easterEggMessages.length;
-    return easterEggMessages[messageIndex];
+    if (easterEggActive.value) {
+        return currentMessage.value;
+    }
+    return `User ID: ${userId}`;
 });
 
 const userIconClass = computed(() => {
@@ -153,14 +165,45 @@ const userIconClass = computed(() => {
 });
 
 const triggerEasterEgg = () => {
+    const currentTime = Date.now();
+    
+    // Reset if more than 2 seconds have passed since last click
+    if (currentTime - lastClickTime.value > 2000) {
+        clickCount.value = 0;
+    }
+    
     clickCount.value++;
-    easterEggActive.value = true;
-    showConfetti.value = true;
-
-    setTimeout(() => {
-        easterEggActive.value = false;
-        showConfetti.value = false;
-    }, 3000);
+    lastClickTime.value = currentTime;
+    
+    // Clear existing timeout
+    if (clickTimeout.value) {
+        clearTimeout(clickTimeout.value);
+    }
+    
+    // Set timeout to reset click count if no more clicks
+    clickTimeout.value = setTimeout(() => {
+        clickCount.value = 0;
+    }, 2000);
+    
+    // Only trigger easter egg after 5 clicks
+    if (clickCount.value >= 5) {
+        easterEggActive.value = true;
+        showConfetti.value = true;
+        messageClicked.value = false;
+        
+        // Select a random message
+        const randomIndex = Math.floor(Math.random() * easterEggMessages.length);
+        currentMessage.value = easterEggMessages[randomIndex];
+        
+        // Reset click count after triggering
+        clickCount.value = 0;
+        
+        setTimeout(() => {
+            easterEggActive.value = false;
+            showConfetti.value = false;
+            messageClicked.value = false;
+        }, 3000);
+    }
 };
 
 const confettiStyle = (index) => {
@@ -185,6 +228,12 @@ const confettiStyle = (index) => {
         animationDuration: `${randomDuration}s`,
     };
 };
+
+const handleMessageClick = () => {
+    if (easterEggActive.value && !messageClicked.value) {
+        messageClicked.value = true;
+    }
+};
 </script>
 
 <style scoped>
@@ -207,6 +256,11 @@ const confettiStyle = (index) => {
     animation: rainbow 2s ease infinite;
     color: white;
     box-shadow: 0 0 20px rgba(0, 122, 217, 0.5);
+}
+
+.user-info.click-progress {
+    border: 2px solid rgba(0, 122, 217, 0.3);
+    animation: pulse 1s ease-in-out;
 }
 
 .user-icon {
@@ -283,6 +337,18 @@ const confettiStyle = (index) => {
     }
 }
 
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -315,5 +381,14 @@ const confettiStyle = (index) => {
 
 .ml-auto-item {
     margin-left: auto;
+}
+
+.easter-egg-message {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.easter-egg-message.message-clicked {
+    color: white !important;
 }
 </style>

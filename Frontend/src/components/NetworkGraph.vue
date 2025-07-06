@@ -960,23 +960,23 @@ export default {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #6366f1;
+    background: var(--nlb-primary);
 }
 
 .node-indicator.multicast {
-    background: #f59e0b;
+    background: var(--nlb-warning);
 }
 
 .node-ip {
     font-family: monospace;
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--nlb-text-primary);
     font-weight: 500;
 }
 
 .packet-count {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     font-weight: 600;
 }
 
