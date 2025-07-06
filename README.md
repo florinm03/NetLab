@@ -24,7 +24,6 @@ NetLab is a web-based network topology simulator that allows users to create, vi
 
 - [Flask](https://flask.palletsprojects.com/en/2.3.x/)
 - [Docker](https://www.docker.com/)
-- [Gunicorn](https://gunicorn.org/)
 
 ## Getting Started
 
@@ -63,7 +62,6 @@ NetLab is a web-based network topology simulator that allows users to create, vi
 
     ```bash
     cd Prototyp/Backend/NetLabBuilder
-    gunicorn --workers 4 'src.net_lab_builder.app:app'
     ```
 
 2.  **Start the frontend development server:**
@@ -74,7 +72,3 @@ NetLab is a web-based network topology simulator that allows users to create, vi
     ```
 
 3.  **Open your browser** and navigate to the URL provided by the Vite development server (usually `http://localhost:5173`).
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](Prototyp/Backend/NetLabBuilder/LICENSE) file for details.
