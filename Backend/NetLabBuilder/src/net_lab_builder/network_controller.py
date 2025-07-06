@@ -14,16 +14,25 @@ class NetworkController:
     It provides methods for creating, retrieving, connecting nodes to networks and managing system resources.
     """
 
-    def __init__(self):
+    def __init__(self, user_id=None):
         """
         Initialize a new instance of the NetworkController class.
+        
+        Args:
+            user_id (str, optional): User ID to create unique labels for isolation
         """
-        self.adapter = DockerAdapter()
-        self.__label = _config["label"]
+        self.__user_id = user_id
+        # Create unique label per user to prevent conflicts
+        if user_id:
+            self.__label = f"{_config['label']}-{user_id}"
+        else:
+            self.__label = _config["label"]
+            
+        self.adapter = DockerAdapter(self.__label)
         self.__logger = LoggerFactory.get_logger(
             "NetworkController", log_level=_config["log_level"]
         )
-        self.__logger.info("NetowrkController initialized")
+        self.__logger.info(f"NetworkController initialized with label: {self.__label}")
 
     def create_node(self, base_name: str = "node") -> Node:
         """
@@ -140,6 +149,15 @@ class NetworkController:
         self.__logger.info("Stopping all nodes...")
         self.adapter.stop_all_nodes()
         self.__logger.info("All nodes stopped")
+
+    def stop_user_topology(self):
+        """
+        Stop and clean up only the containers and networks for this specific user.
+        """
+        self.__logger.info(f"Stopping topology for user {self.__user_id}...")
+        self.adapter.stop_all_nodes()
+        self.adapter.prune(containers=True, networks=True, volumes=False, images=False)
+        self.__logger.info(f"Topology for user {self.__user_id} stopped and cleaned up")
 
     def prune_all(self):
         """

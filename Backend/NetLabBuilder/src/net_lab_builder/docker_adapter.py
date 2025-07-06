@@ -27,16 +27,16 @@ class DockerAdapter:
         __pcap_volume: Volume used for storing pcap files.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, label=None) -> None:
         self.__logger = LoggerFactory.get_logger(
             "NodeController", log_level=_config["log_level"]
         )
         self.__client = docker.from_env()
-        self.__label = _config["label"]
+        self.__label = label if label else _config["label"]
         self.images = self.__init_docker_images()
         self.__pcap_merger = None
         self.__pcap_volume = self.__init_pcap()
-        self.__logger.info("DockerAdapter initialized")
+        self.__logger.info(f"DockerAdapter initialized with label: {self.__label}")
 
     def create_node(
         self,
@@ -102,15 +102,17 @@ class DockerAdapter:
             docker.errors.APIError: If there is an API error while creating the network.
         """
         labels = {self.__label: ""}
-        # Just iterate from 100 to 255 and find the first free subnet
+        # Iterate from 100 to 255 and find the first free subnet
         subnet_mask = None
         for i in range(101, 255):
             subnet_tmp = f"172.{i}"
-            if self.get_network_by_subnet(f"{subnet_tmp}.0.0/16") is None:
+            subnet_cidr = f"{subnet_tmp}.0.0/16"
+            if self.get_network_by_subnet(subnet_cidr) is None:
                 subnet_mask = subnet_tmp
+                self.__logger.debug(f"Found free subnet: {subnet_cidr}")
                 break
         if subnet_mask is None:
-            raise ValueError("No free subnet found")
+            raise ValueError("No free subnet found in range 172.101.0.0/16 to 172.254.0.0/16")
         ipam_pool = docker.types.IPAMPool(
             subnet=f"{subnet_mask}.0.0/16", gateway=f"{subnet_mask}.0.1"
         )
@@ -118,7 +120,7 @@ class DockerAdapter:
 
         try:
             self.__logger.debug(
-                f"Creating network {name} with subnet {subnet_mask} and gateway {subnet_mask}.0.1"
+                f"Creating network {name} with subnet {subnet_mask}.0.0/16 and gateway {subnet_mask}.0.1"
             )
             network = self.__client.networks.create(
                 name=name,
@@ -126,9 +128,13 @@ class DockerAdapter:
                 ipam=ipam_config,
                 labels=labels,
             )
+            self.__logger.info(f"Successfully created network {name} with subnet {subnet_mask}.0.0/16")
             return network
         except docker.errors.APIError as e:
-            self.__logger.error(f"Error creating network: {e}")
+            error_msg = f"Error creating network {name}: {e}"
+            if "Pool overlaps" in str(e):
+                error_msg += f" - Subnet {subnet_mask}.0.0/16 is already in use by another network"
+            self.__logger.error(error_msg)
             raise
 
     def check_docker_daemon_health(self) -> bool:
@@ -142,6 +148,23 @@ class DockerAdapter:
             return self.__client.ping()
         except docker.errors.APIError:
             return False
+
+    def get_used_subnets(self) -> List[str]:
+        """
+        Get a list of all subnets currently in use by any Docker networks.
+        
+        Returns:
+            List[str]: List of subnet CIDR strings currently in use
+        """
+        used_subnets = []
+        try:
+            for network in self.__client.networks.list():
+                if network.attrs["IPAM"]["Config"] and len(network.attrs["IPAM"]["Config"]) > 0:
+                    subnet = network.attrs["IPAM"]["Config"][0]["Subnet"]
+                    used_subnets.append(subnet)
+        except docker.errors.APIError as e:
+            self.__logger.error(f"Error getting used subnets: {e}")
+        return used_subnets
 
     def get_containers(self) -> List[DockerContainer]:
         """
@@ -245,7 +268,7 @@ class DockerAdapter:
 
     def get_network_by_subnet(self, subnet: str) -> DockerNetwork:
         """
-        This method retrieves a Docker network associated with the current project by its subnet.
+        This method retrieves a Docker network by its subnet, checking ALL networks to avoid conflicts.
         If no network with the specified subnet is found, it returns None.
 
         Args:
@@ -254,10 +277,15 @@ class DockerAdapter:
         Returns:
             DockerNetwork or None: The Docker network if found, None otherwise.
         """
-        for network in self.get_networks():
-            if network.attrs["IPAM"]["Config"][0]["Subnet"] == subnet:
-                return network
-        return None
+        try:
+            for network in self.__client.networks.list():
+                if network.attrs["IPAM"]["Config"] and len(network.attrs["IPAM"]["Config"]) > 0:
+                    if network.attrs["IPAM"]["Config"][0]["Subnet"] == subnet:
+                        return network
+            return None
+        except docker.errors.APIError as e:
+            self.__logger.error(f"Error checking networks for subnet {subnet}: {e}")
+            return None
 
     def restart_all_nodes(self) -> None:
         for container in self.get_containers():
@@ -302,19 +330,31 @@ class DockerAdapter:
             This is a continuous loop intended to be used with an exception interrupt. Without an interrupt, this method will keep running indefinitely.
         """
         while True:
-            self.__pcap_merger.reload()
-            pcap_files = self.__get_pcap_files()
-            pcap_files_str = " ".join(pcap_files)
-            command = f"mergecap -w {_config['pcap_merge_target']} {pcap_files_str}"
-            self.__logger.info(
-                f"Merge pcap files to {_config['pcap_merge_target']}: {pcap_files_str}"
-            )
             try:
-                self.__pcap_merger.exec_run(command)
-            except docker.errors.APIError as e:
-                self.__logger.error(f"Error while merging pcap files: {e.explanation}")
-                raise
-            time.sleep(_config["pcap_merge_interval"])
+                # Check if pcap merger container still exists
+                if self.__pcap_merger is None:
+                    self.__logger.error("PCAP merger container is None, cannot merge files")
+                    break
+                    
+                self.__pcap_merger.reload()
+                pcap_files = self.__get_pcap_files()
+                pcap_files_str = " ".join(pcap_files)
+                command = f"mergecap -w {_config['pcap_merge_target']} {pcap_files_str}"
+                self.__logger.info(
+                    f"Merge pcap files to {_config['pcap_merge_target']}: {pcap_files_str}"
+                )
+                try:
+                    self.__pcap_merger.exec_run(command)
+                except docker.errors.APIError as e:
+                    self.__logger.error(f"Error while merging pcap files: {e.explanation}")
+                    raise
+                except docker.errors.NotFound:
+                    self.__logger.error("PCAP merger container not found, stopping merge")
+                    break
+                time.sleep(_config["pcap_merge_interval"])
+            except Exception as e:
+                self.__logger.error(f"Unexpected error in pcap_merge: {str(e)}")
+                break
 
     def remove_container_from_none_network(self, container: DockerContainer) -> None:
         """
@@ -428,15 +468,17 @@ class DockerAdapter:
         does not already exist. The new container is detached, labeled with 'self.__label',
         and the 'pcap_data' volume is mounted to '/pcap' in the container.
         """
-        if "pcap_data" not in self.__client.volumes.list():
-            self.__client.volumes.create(name="pcap_data", labels={self.__label: ""})
+        # Create unique volume per user to avoid conflicts
+        volume_name = f"pcap_data_{self.__label}"
+        if volume_name not in [v.name for v in self.__client.volumes.list()]:
+            self.__client.volumes.create(name=volume_name, labels={self.__label: ""})
 
         if not self.get_container(f"{self.__label}-pcap-merger"):
             self.__pcap_merger = self.__client.containers.run(
                 image="linuxserver/wireshark",
                 name=f"{self.__label}-pcap-merger",
                 detach=True,
-                volumes=["pcap_data:/pcap"],
+                volumes=[f"{volume_name}:/pcap"],
                 labels=[self.__label],
             )
             self.__pcap_merger.reload()

@@ -77,18 +77,71 @@ def start_topology():
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id required'}), 400
 
+        # Check if user already has a running topology
+        containers = client.containers.list(
+            filters={'name': f'prototype-{user_id}'}
+        )
+        if containers:
+            return jsonify({
+                'status': 'error',
+                'user_id': user_id,
+                'topology': topology_name,
+                'message': f'User {user_id} already has a running topology. Please stop it first.',
+                'details': f'Found {len(containers)} running containers for this user'
+            }), 409  # Conflict status code
+
         # Construct the file path
         topology_script = f"../topologies_by_userid/{topology_name}_by_user.py"
         print("topology_script:", topology_script)
+        
+        # Check if the topology script file exists
+        import os
+        script_path = os.path.join(os.path.dirname(__file__), topology_script)
+        if not os.path.exists(script_path):
+            error_msg = f"Topology script not found: {script_path}"
+            logger.error(error_msg)
+            return jsonify({
+                'status': 'error',
+                'user_id': user_id,
+                'topology': topology_name,
+                'message': error_msg,
+                'details': f'Available topologies: {[f.split("_by_user.py")[0] for f in os.listdir(os.path.join(os.path.dirname(__file__), "../topologies_by_userid")) if f.endswith("_by_user.py")]}'
+            }), 404
+        
+        print("Script path exists:", script_path)
+        print("Current working directory:", os.getcwd())
 
         # Execute the topology script in background
-        process = subprocess.Popen([
-            'python3',
-            topology_script,
-            user_id
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = ['python3', topology_script, user_id]
+        print("Executing command:", cmd)
+        
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            cwd=os.path.dirname(__file__)  # Set working directory to the app.py directory
+        )
 
-        # Immediately return success while the topology runs in background
+        # Give the process a moment to start and check for immediate errors
+        import time
+        time.sleep(1)
+        
+        # Check if process has already terminated (indicating an error)
+        if process.poll() is not None:
+            # Process has terminated, get the error output
+            stdout, stderr = process.communicate()
+            error_output = stderr.decode('utf-8') if stderr else "Unknown error"
+            logger.error(f"Topology script failed to start: {error_output}")
+            return jsonify({
+                'status': 'error',
+                'user_id': user_id,
+                'topology': topology_name,
+                'message': f'Failed to start topology: {error_output}',
+                'details': 'Check server logs for more information'
+            }), 500
+        
+        # Process is running, return success
+        logger.info(f"Topology script started successfully for user {user_id} with PID {process.pid}")
         return jsonify({
             'status': 'success',
             'user_id': user_id,
@@ -146,7 +199,7 @@ def start_container():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        session_id = data.get('session_id') # noch wird keine session id erstellt
+        session_id = data.get('session_id') # noch wird keine session id erstellt todo für später
 
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id required'}), 400

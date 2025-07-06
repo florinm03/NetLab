@@ -17,7 +17,7 @@ def mini_ring_topology(user_id = None):
         except IndexError:
             user_id = "guest-user"
     try:
-        nc = NetworkController()
+        nc = NetworkController(user_id=user_id)
 
         n1 = nc.create_node(base_name=f"node-{user_id}")
         n2 = nc.create_node(base_name=f"node-{user_id}")
@@ -41,8 +41,7 @@ def mini_ring_topology(user_id = None):
         pass
     finally:
         if nc:
-            nc.stop_all_nodes()
-            nc.prune_all()
+            nc.stop_user_topology()
 
 
 if __name__ == "__main__":
