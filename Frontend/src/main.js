@@ -39,6 +39,9 @@ app.provide("axios", apiClient); // For Composition API usage
 app.use(PrimeVue, {
   theme: {
     preset: Aura,
+    options: {
+      darkModeSelector: 'none',
+    }
   },
 });
 app.directive("ripple", Ripple);

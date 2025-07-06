@@ -1,5 +1,22 @@
 @import "./base.css";
 
+/* Force light mode and disable dark mode detection */
+:root {
+    color-scheme: light only;
+}
+
+/* Override any dark mode styles */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: light only;
+    }
+}
+
+/* Force light theme variables */
+:root {
+    --p-color-scheme: light;
+}
+
 html,
 body,
 #app {
