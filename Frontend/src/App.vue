@@ -1,7 +1,6 @@
 <script setup>
 import MenuBar from "./components/MenuBar.vue";
 import Toast from "primevue/toast";
-import CarouselGraphs from "./components/CarouselGraphs.vue";
 
 import { useRouter } from "vue-router";
 

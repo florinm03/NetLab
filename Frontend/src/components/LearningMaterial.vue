@@ -313,7 +313,7 @@ export default {
             this.selectedTopology = topologyKey;
         },
         navigateToLab() {
-            this.$router.push('/lab');
+            this.$router.push('/controller');
         }
     },
 };
@@ -363,7 +363,7 @@ export default {
 }
 
 .topology-item {
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 12px;
     padding: 1rem;
     margin: 0 0.25rem;
@@ -387,33 +387,33 @@ export default {
 }
 
 .topology-item.selected {
-    border: 2px solid #007ad9;
+    border: 2px solid var(--nlb-accent);
     box-shadow: 0 6px 12px rgba(0, 122, 217, 0.2);
 }
 
 .topology-icon {
     font-size: 2.2rem;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: var(--nlb-gradient-accent);
     width: 60px;
     height: 60px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--nlb-text-light);
     margin-bottom: 0.5rem;
 }
 
 .topology-name {
     font-size: 1.1rem;
     font-weight: bold;
-    color: #1f2937;
+    color: var(--nlb-text-primary);
     text-align: center;
     margin-bottom: 0.3rem;
 }
 
 .topology-brief {
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     text-align: center;
     font-size: 0.9rem;
     line-height: 1.4;
@@ -422,11 +422,11 @@ export default {
 }
 
 .p-button-sm {
-    background: #4f46e5;
+    background: var(--nlb-primary);
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 8px;
-    color: white;
+    color: var(--nlb-text-light);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -437,16 +437,16 @@ export default {
 }
 
 .p-button-sm:hover {
-    background: #4338ca;
+    background: var(--nlb-primary-dark);
     transform: translateY(-2px);
 }
 
 .topology-details {
-    background: #f7fafc;
+    background: var(--nlb-bg-muted);
     border-radius: 8px;
     padding: 1rem;
     margin-top: 1rem;
-    border-left: 4px solid #4299e1;
+    border-left: 4px solid var(--nlb-info);
     max-width: 100%;
     box-sizing: border-box;
     overflow-wrap: break-word;
@@ -471,7 +471,7 @@ export default {
 .details-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     margin-bottom: 1rem;
 }
 
@@ -482,7 +482,7 @@ export default {
 .details-section h4 {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--nlb-text-secondary);
     margin-bottom: 0.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -490,7 +490,7 @@ export default {
 
 .details-section p {
     font-size: 0.875rem;
-    color: #718096;
+    color: var(--nlb-text-muted);
     line-height: 1.6;
 }
 
@@ -502,7 +502,7 @@ export default {
 }
 
 .advantages-list li {
-    color: #38a169;
+    color: var(--nlb-success);
     margin-bottom: 0.25rem;
     position: relative;
     padding-left: 1.25rem;
@@ -517,7 +517,7 @@ export default {
 }
 
 .disadvantages-list li {
-    color: #e53e3e;
+    color: var(--nlb-error);
     margin-bottom: 0.25rem;
     position: relative;
     padding-left: 1.25rem;
@@ -533,7 +533,7 @@ export default {
 
 .prompt-text {
     text-align: center;
-    color: #718096;
+    color: var(--nlb-text-muted);
     font-size: 0.875rem;
     font-style: italic;
     margin-top: 2rem;

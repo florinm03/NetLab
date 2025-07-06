@@ -14,7 +14,7 @@
                         Netzwerkverkehr in einer sicheren, virtuellen Umgebung.
                     </p>
                     <div class="hero-buttons">
-                        <button class="btn btn-primary" @click="navigateTo('')">
+                        <button class="btn btn-primary" @click="navigateTo('controller')">
                             <i class="pi pi-play"></i>
                             Jetzt starten
                         </button>
@@ -248,7 +248,7 @@ export default {
 
 .homepage {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--nlb-gradient-primary);
     font-family:
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -274,7 +274,7 @@ export default {
 }
 
 .brand-title {
-    color: #4f46e5;
+    color: var(--nlb-primary);
     font-size: 1.5rem;
     font-weight: bold;
 }
@@ -285,7 +285,7 @@ export default {
 }
 
 .nav-link {
-    color: #374151;
+    color: var(--nlb-text-primary);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -296,8 +296,8 @@ export default {
 }
 
 .nav-link:hover {
-    background: #4f46e5;
-    color: white;
+    background: var(--nlb-primary);
+    color: var(--nlb-text-light);
     transform: translateY(-2px);
 }
 
@@ -305,7 +305,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -326,7 +326,7 @@ export default {
 .hero-title {
     font-size: 3.5rem;
     font-weight: bold;
-    color: white;
+    color: var(--nlb-text-light);
     margin-bottom: 1rem;
     line-height: 1.2;
 }
@@ -362,8 +362,8 @@ export default {
 }
 
 .btn-primary {
-    background: white;
-    color: #4f46e5;
+    background: var(--nlb-bg-primary);
+    color: var(--nlb-primary);
 }
 
 .btn-primary:hover {
@@ -373,7 +373,7 @@ export default {
 
 .btn-secondary {
     background: rgba(255, 255, 255, 0.2);
-    color: white;
+    color: var(--nlb-text-light);
     border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -405,7 +405,7 @@ export default {
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    color: #4f46e5;
+    color: var(--nlb-primary);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     z-index: 10;
@@ -413,7 +413,7 @@ export default {
 }
 
 .node:hover {
-    background: white;
+    background: var(--nlb-bg-primary);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -427,7 +427,7 @@ export default {
 }
 
 .central-node:hover {
-    background: white;
+    background: var(--nlb-bg-primary);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -464,7 +464,7 @@ export default {
 .section-title {
     text-align: center;
     font-size: 2.5rem;
-    color: #1f2937;
+    color: var(--nlb-text-primary);
     margin-bottom: 3rem;
     font-weight: bold;
 }
@@ -476,7 +476,7 @@ export default {
 }
 
 .feature-card {
-    background: white;
+    background: var(--nlb-bg-primary);
     padding: 2rem;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -495,7 +495,7 @@ export default {
 .feature-icon {
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: var(--nlb-gradient-accent);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -505,18 +505,18 @@ export default {
 
 .feature-icon i {
     font-size: 1.5rem;
-    color: white;
+    color: var(--nlb-text-light);
 }
 
 .feature-card h3 {
-    color: #1f2937;
+    color: var(--nlb-text-primary);
     font-size: 1.25rem;
     font-weight: bold;
     margin-bottom: 1rem;
 }
 
 .feature-card p {
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     line-height: 1.6;
     margin-bottom: 1.5rem;
 }
@@ -525,7 +525,7 @@ export default {
     position: absolute;
     top: 2rem;
     right: 2rem;
-    color: #4f46e5;
+    color: var(--nlb-primary);
     opacity: 0;
     transition: all 0.3s ease;
 }
@@ -538,7 +538,7 @@ export default {
 
 /* Quick Start Section */
 .quickstart-section {
-    background: #f9fafb;
+    background: var(--nlb-bg-secondary);
     padding: 6rem 0;
 }
 
@@ -557,8 +557,8 @@ export default {
 .step-number {
     width: 40px;
     height: 40px;
-    background: #4f46e5;
-    color: white;
+    background: var(--nlb-primary);
+    color: var(--nlb-text-light);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -568,22 +568,22 @@ export default {
 }
 
 .step-content h3 {
-    color: #1f2937;
+    color: var(--nlb-text-primary);
     font-size: 1.1rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
 .step-content p {
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     line-height: 1.6;
 }
 
 /* Stats Section */
 .stats-section {
-    background: linear-gradient(135deg, #1f2937, #374151);
+    background: linear-gradient(135deg, var(--nlb-text-primary), var(--nlb-text-secondary));
     padding: 4rem 0;
-    color: white;
+    color: var(--nlb-text-light);
 }
 
 .stats-grid {
@@ -597,7 +597,7 @@ export default {
     font-size: 2.5rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
-    color: white;
+    color: var(--nlb-text-light);
 }
 
 .stat-label {

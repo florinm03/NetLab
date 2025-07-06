@@ -2,7 +2,7 @@
     <div>
         <Menubar :model="items">
             <template #start>
-                <RouterLink to="/start" class="logo-link">
+                <RouterLink to="/" class="logo-link">
                     <h2 class="logo">NetLab</h2>
                 </RouterLink>
             </template>
@@ -82,12 +82,12 @@ const items = ref([
     {
         label: "Home",
         icon: "pi pi-home",
-        route: "/start",
+        route: "/",
     },
     {
         label: "Controller",
         icon: "pi pi-cog",
-        route: "/",
+        route: "/controller",
     },
     {
         label: "Topologien",
@@ -190,7 +190,7 @@ const confettiStyle = (index) => {
 <style scoped>
 .user-info {
     display: flex;
-    color: black;
+    color: var(--nlb-text-primary);
     align-items: center;
     gap: 8px;
     background: rgba(250, 250, 250, 1);
@@ -289,7 +289,7 @@ const confettiStyle = (index) => {
     justify-content: center;
     font-size: 2rem;
     font-weight: bold;
-    color: #007ad9;
+    color: var(--nlb-accent);
     letter-spacing: 2px;
 }
 
@@ -298,19 +298,19 @@ const confettiStyle = (index) => {
 }
 
 .logo:hover {
-    color: #005999;
+    color: var(--nlb-accent-dark);
     transform: scale(1.01);
 }
 
 .active-link {
-    background-color: #e3f2fd !important;
-    color: #007ad9 !important;
+    background-color: var(--nlb-info-light) !important;
+    color: var(--nlb-accent) !important;
     border-radius: 6px;
     font-weight: 600;
 }
 
 .active-link i {
-    color: #007ad9 !important;
+    color: var(--nlb-accent) !important;
 }
 
 .ml-auto-item {

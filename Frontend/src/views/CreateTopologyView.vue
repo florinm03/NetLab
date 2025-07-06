@@ -501,7 +501,7 @@ if __name__ == "__main__":
     width: 100%;
     margin: 0 auto;
     padding: 2rem;
-    background: #f8f9fa;
+    background: var(--nlb-bg-secondary);
     min-height: auto;
 }
 
@@ -513,26 +513,26 @@ if __name__ == "__main__":
 .page-title {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: var(--nlb-text-primary);
     margin-bottom: 0.5rem;
 }
 
 .page-description {
     font-size: 1.1rem;
-    color: #6c757d;
+    color: var(--nlb-text-secondary);
     margin: 0;
 }
 
 .section-title {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--nlb-text-primary);
     margin-bottom: 1rem;
 }
 
 .carousel-section {
     margin-bottom: 3rem;
-    background: white;
+    background: var(--nlb-bg-primary);
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -543,8 +543,8 @@ if __name__ == "__main__":
 }
 
 .example-card {
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
+    background: var(--nlb-bg-secondary);
+    border: 2px solid var(--nlb-border-light);
     border-radius: 8px;
     padding: 1.5rem;
     margin: 0 0.5rem;
@@ -556,7 +556,7 @@ if __name__ == "__main__":
 }
 
 .example-card:hover {
-    border-color: #007bff;
+    border-color: var(--nlb-accent);
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
     transform: translateY(-2px);
 }
@@ -570,13 +570,13 @@ if __name__ == "__main__":
 
 .card-header h4 {
     margin: 0;
-    color: #2c3e50;
+    color: var(--nlb-text-primary);
     font-size: 1.2rem;
 }
 
 .card-badge {
-    background: #007bff;
-    color: white;
+    background: var(--nlb-accent);
+    color: var(--nlb-text-light);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -584,14 +584,14 @@ if __name__ == "__main__":
 }
 
 .card-description {
-    color: #6c757d;
+    color: var(--nlb-text-secondary);
     margin-bottom: 1rem;
     flex-grow: 1;
 }
 
 .card-preview {
-    background: #2d3748;
-    color: #e2e8f0;
+    background: var(--nlb-text-primary);
+    color: var(--nlb-bg-primary);
     padding: 0.75rem;
     border-radius: 4px;
     margin-bottom: 1rem;
@@ -607,7 +607,7 @@ if __name__ == "__main__":
 }
 
 .editor-section {
-    background: white;
+    background: var(--nlb-bg-primary);
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -632,7 +632,7 @@ if __name__ == "__main__":
 }
 
 .metadata-section {
-    background: white;
+    background: var(--nlb-bg-primary);
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -658,7 +658,7 @@ if __name__ == "__main__":
 
 .form-group label {
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--nlb-text-primary);
     margin-bottom: 0.5rem;
 }
 

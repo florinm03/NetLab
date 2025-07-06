@@ -778,13 +778,13 @@ export default {
     width: 100%;
     margin: 0 auto;
     padding: 20px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: var(--nlb-gradient-secondary);
     height: auto;
 }
 
 /* Main Header */
 .main-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--nlb-gradient-primary);
     border-radius: 16px;
     margin-bottom: 24px;
     box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
@@ -815,7 +815,7 @@ export default {
     margin: 0;
     font-size: 2.2rem;
     font-weight: 700;
-    background: linear-gradient(45deg, #ffffff, #e0e7ff);
+    background: linear-gradient(45deg, var(--nlb-text-light), #e0e7ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -833,13 +833,13 @@ export default {
 .page-title {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: var(--nlb-text-primary);
     margin-bottom: 0.5rem;
 }
 
 .page-description {
     font-size: 1.1rem;
-    color: #6c757d;
+    color: var(--nlb-text-secondary);
     margin: 0;
 }
 .user-info {
@@ -863,7 +863,7 @@ export default {
 
 .progress-header h3 {
     margin: 0 0 20px 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
 }
 
@@ -892,7 +892,7 @@ export default {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #e2e8f0;
+    background: var(--nlb-border-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -901,29 +901,29 @@ export default {
 }
 
 .progress-step.active .step-circle {
-    background: #667eea;
-    color: white;
+    background: var(--nlb-primary);
+    color: var(--nlb-text-light);
 }
 
 .progress-step.completed .step-circle {
-    background: #48bb78;
-    color: white;
+    background: var(--nlb-success);
+    color: var(--nlb-text-light);
 }
 
 .progress-line {
     width: 60px;
     height: 2px;
-    background: #e2e8f0;
+    background: var(--nlb-border-light);
     transition: all 0.3s ease;
 }
 
 .progress-line.completed {
-    background: #48bb78;
+    background: var(--nlb-success);
 }
 
 /* Main Card */
 .main-card {
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 16px;
     padding: 32px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -941,14 +941,14 @@ export default {
 
 .step-header h3 {
     margin: 0 0 8px 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-size: 1.8rem;
     font-weight: 600;
 }
 
 .step-header p {
     margin: 0;
-    color: #718096;
+    color: var(--nlb-text-secondary);
     font-size: 1.1rem;
 }
 
@@ -959,7 +959,7 @@ export default {
 
 /* Topology Selection */
 .topology-selection-card {
-    background: #f8fafc;
+    background: var(--nlb-bg-secondary);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 32px;
@@ -974,7 +974,7 @@ export default {
 
 .selection-header h4 {
     margin: 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
 }
 
@@ -995,24 +995,24 @@ export default {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: #e6fffa;
-    border: 1px solid #81e6d9;
+    background: var(--nlb-info-light);
+    border: 1px solid var(--nlb-info);
     border-radius: 8px;
     padding: 16px;
 }
 
 .info-card i {
-    color: #319795;
+    color: var(--nlb-info-dark);
     margin-top: 2px;
 }
 
 .info-card strong {
-    color: #2d3748;
+    color: var(--nlb-text-primary);
 }
 
 .info-card p {
     margin: 4px 0 0 0;
-    color: #4a5568;
+    color: var(--nlb-text-secondary);
 }
 
 /* Configuration Grid */
@@ -1024,10 +1024,10 @@ export default {
 }
 
 .config-card {
-    background: #f8fafc;
+    background: var(--nlb-bg-secondary);
     border-radius: 12px;
     padding: 24px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--nlb-border-light);
 }
 
 .card-header {
@@ -1041,7 +1041,7 @@ export default {
 
 .card-header h4 {
     margin: 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
 }
 
@@ -1053,8 +1053,8 @@ export default {
 
 /* Session Info */
 .session-info-card {
-    background: linear-gradient(135deg, #f0fff4 0%, #f7fafc 100%);
-    border: 2px solid #68d391;
+    background: linear-gradient(135deg, var(--nlb-success-light) 0%, var(--nlb-bg-muted) 100%);
+    border: 2px solid var(--nlb-success);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 32px;
@@ -1069,7 +1069,7 @@ export default {
 
 .session-header h4 {
     margin: 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
     flex: 1;
 }
@@ -1083,8 +1083,8 @@ export default {
 }
 
 .status-badge.running {
-    background: #c6f6d5;
-    color: #22543d;
+    background: var(--nlb-success-light);
+    color: var(--nlb-success-dark);
 }
 
 .session-details {
@@ -1093,7 +1093,7 @@ export default {
 
 .detail-item {
     margin-bottom: 8px;
-    color: #4a5568;
+    color: var(--nlb-text-secondary);
 }
 
 .terminal-section {
@@ -1109,20 +1109,20 @@ export default {
 
 .terminal-header h5 {
     margin: 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
 }
 
 .terminal-container {
     border-radius: 8px;
     overflow: hidden;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--nlb-border-light);
 }
 
 /* Nodes Info */
 .nodes-info-card {
-    background: linear-gradient(135deg, #fffaf0 0%, #f7fafc 100%);
-    border: 2px solid #f6ad55;
+    background: linear-gradient(135deg, var(--nlb-warning-light) 0%, var(--nlb-bg-muted) 100%);
+    border: 2px solid var(--nlb-warning);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 32px;
@@ -1137,14 +1137,14 @@ export default {
 
 .nodes-header h4 {
     margin: 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
     flex: 1;
 }
 
 .node-count {
-    background: #fed7d7;
-    color: #c53030;
+    background: var(--nlb-error-light);
+    color: var(--nlb-error-dark);
     padding: 4px 12px;
     border-radius: 16px;
     font-size: 0.8rem;
@@ -1162,13 +1162,13 @@ export default {
     align-items: center;
     gap: 8px;
     padding: 12px;
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--nlb-border-light);
 }
 
 .node-indicator {
-    color: #48bb78;
+    color: var(--nlb-success);
     font-size: 0.8rem;
 }
 
@@ -1188,7 +1188,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 16px;
-    background: white;
+    background: var(--nlb-bg-primary);
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -1197,20 +1197,20 @@ export default {
 
 .stat-item i {
     font-size: 2rem;
-    color: #667eea;
+    color: var(--nlb-primary);
 }
 
 .stat-number {
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
 }
 
 .stat-label {
     display: block;
     font-size: 0.9rem;
-    color: #718096;
+    color: var(--nlb-text-secondary);
     margin-top: 4px;
 }
 
@@ -1225,13 +1225,13 @@ export default {
 
 .terminals-header h4 {
     margin: 0 0 8px 0;
-    color: #2d3748;
+    color: var(--nlb-text-primary);
     font-weight: 600;
 }
 
 .terminals-header p {
     margin: 0;
-    color: #718096;
+    color: var(--nlb-text-secondary);
 }
 
 /* Accordion Styling */
@@ -1261,8 +1261,8 @@ export default {
 }
 
 .node-status.online {
-    background: #c6f6d5;
-    color: #22543d;
+    background: var(--nlb-success-light);
+    color: var(--nlb-success-dark);
 }
 
 /* Terminal Styling */
@@ -1272,22 +1272,22 @@ export default {
 
 .terminal-info {
     margin-bottom: 16px;
-    color: #718096;
+    color: var(--nlb-text-secondary);
 }
 
 .terminal-iframe {
     width: 100%;
     height: 500px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--nlb-border-light);
     border-radius: 8px;
     background: #1a202c;
 }
 
 /* Buttons */
 .primary-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: var(--nlb-gradient-primary) !important;
     border: none !important;
-    color: white !important;
+    color: var(--nlb-text-light) !important;
     padding: 12px 24px !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
@@ -1308,14 +1308,14 @@ export default {
 }
 
 .action-button.secondary {
-    background: #f7fafc;
-    border: 2px solid #e2e8f0;
-    color: #4a5568;
+    background: var(--nlb-bg-muted);
+    border: 2px solid var(--nlb-border-light);
+    color: var(--nlb-text-secondary);
 }
 
 .action-button.secondary:hover {
-    background: #edf2f7;
-    border-color: #cbd5e0;
+    background: var(--nlb-bg-tertiary);
+    border-color: var(--nlb-border-medium);
 }
 
 /* Step Actions */
@@ -1325,7 +1325,7 @@ export default {
     justify-content: center;
     margin-top: 32px;
     padding-top: 24px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--nlb-border-light);
 }
 
 /* Error Messages */
@@ -1333,9 +1333,9 @@ export default {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #fed7d7;
-    border: 1px solid #feb2b2;
-    color: #c53030;
+    background: var(--nlb-error-light);
+    border: 1px solid var(--nlb-error);
+    color: var(--nlb-error-dark);
     padding: 12px;
     border-radius: 8px;
     margin-top: 12px;
@@ -1345,9 +1345,9 @@ export default {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #bee3f8;
-    border: 1px solid #90cdf4;
-    color: #2b6cb0;
+    background: var(--nlb-info-light);
+    border: 1px solid var(--nlb-info);
+    color: var(--nlb-info-dark);
     padding: 12px;
     border-radius: 8px;
     margin-top: 12px;
@@ -1357,7 +1357,7 @@ export default {
 .empty-state {
     text-align: center;
     padding: 48px 24px;
-    color: #718096;
+    color: var(--nlb-text-secondary);
 }
 
 .empty-state i {
@@ -1368,7 +1368,7 @@ export default {
 
 .empty-state h4 {
     margin: 0 0 8px 0;
-    color: #4a5568;
+    color: var(--nlb-text-primary);
 }
 
 .empty-state p {
@@ -1437,16 +1437,16 @@ export default {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--nlb-bg-tertiary);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
+    background: var(--nlb-border-medium);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
+    background: var(--nlb-border-dark);
 }
 </style>

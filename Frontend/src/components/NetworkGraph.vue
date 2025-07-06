@@ -679,8 +679,8 @@ export default {
 
 /* Header Section */
 .header-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--nlb-gradient-primary);
+    color: var(--nlb-text-light);
     padding: 4rem 2rem 3rem;
 }
 
@@ -697,7 +697,7 @@ export default {
     font-size: 3rem;
     font-weight: 700;
     margin: 0 0 1rem 0;
-    background: linear-gradient(45deg, #fff, #e3f2fd);
+    background: linear-gradient(45deg, var(--nlb-text-light), #e3f2fd);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -745,13 +745,13 @@ export default {
 .graph-container {
     max-width: 1200px;
     margin: 0 auto;
-    background: white;
+    background: var(--nlb-bg-primary);
     overflow: hidden;
 }
 
 .table-header {
     padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--nlb-border-light);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -764,7 +764,7 @@ export default {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--nlb-text-primary);
 }
 
 .filter-chips {
@@ -776,10 +776,10 @@ export default {
 
 .filter-chip {
     padding: 0.5rem 1rem;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--nlb-border-light);
     border-radius: 20px;
-    background: white;
-    color: #64748b;
+    background: var(--nlb-bg-primary);
+    color: var(--nlb-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -787,18 +787,18 @@ export default {
 }
 
 .filter-chip:hover {
-    border-color: #6366f1;
-    color: #6366f1;
+    border-color: var(--nlb-primary);
+    color: var(--nlb-primary);
 }
 
 .filter-chip.active {
-    background: #6366f1;
-    border-color: #6366f1;
-    color: white;
+    background: var(--nlb-primary);
+    border-color: var(--nlb-primary);
+    color: var(--nlb-text-light);
 }
 
 .results-count {
-    color: #64748b;
+    color: var(--nlb-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
 }
@@ -813,10 +813,10 @@ export default {
     height: 600px;
     border-radius: 8px;
     background:
-        linear-gradient(45deg, #f9fafb 25%, transparent 25%),
-        linear-gradient(-45deg, #f9fafb 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #f9fafb 75%),
-        linear-gradient(-45deg, transparent 75%, #f9fafb 75%);
+        linear-gradient(45deg, var(--nlb-bg-secondary) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--nlb-bg-secondary) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--nlb-bg-secondary) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--nlb-bg-secondary) 75%);
     background-size: 20px 20px;
     background-position:
         0 0,
@@ -832,7 +832,7 @@ export default {
     right: 2rem;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--nlb-border-light);
     border-radius: 12px;
     padding: 1rem 1.5rem;
     min-width: 200px;
@@ -843,7 +843,7 @@ export default {
     margin: 0 0 1rem 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--nlb-text-primary);
 }
 
 .legend-items {
@@ -857,7 +857,7 @@ export default {
     align-items: center;
     gap: 0.75rem;
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--nlb-text-primary);
 }
 
 .legend-circle {
@@ -867,17 +867,17 @@ export default {
 }
 
 .legend-circle.regular {
-    background: #6366f1;
+    background: var(--nlb-primary);
 }
 
 .legend-circle.multicast {
-    background: #f59e0b;
+    background: var(--nlb-warning);
 }
 
 .legend-line {
     width: 24px;
     height: 2px;
-    background: #6b7280;
+    background: var(--nlb-text-secondary);
 }
 
 .legend-line.thin {
@@ -902,7 +902,7 @@ export default {
 }
 
 .stats-card {
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 0 20px 40px rgba(79, 70, 229, 0.15);
@@ -912,7 +912,7 @@ export default {
     margin: 0 0 1rem 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--nlb-text-primary);
 }
 
 .stats-list {
@@ -926,9 +926,9 @@ export default {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem;
-    background: #f9fafb;
+    background: var(--nlb-bg-secondary);
     border-radius: 8px;
-    border-left: 3px solid #6366f1;
+    border-left: 3px solid var(--nlb-primary);
 }
 
 .connection-info {
@@ -941,12 +941,12 @@ export default {
 
 .source,
 .target {
-    color: #374151;
+    color: var(--nlb-text-primary);
     font-weight: 500;
 }
 
 .arrow {
-    color: #6b7280;
+    color: var(--nlb-text-secondary);
     font-weight: bold;
 }
 
@@ -1133,7 +1133,7 @@ export default {
 
 /* Focus styles for accessibility */
 .filter-chip:focus {
-    outline: 2px solid #6366f1;
+    outline: 2px solid var(--nlb-primary);
     outline-offset: 2px;
 }
 </style>

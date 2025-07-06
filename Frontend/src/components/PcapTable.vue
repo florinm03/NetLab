@@ -550,15 +550,15 @@ onMounted(async () => {
 <style scoped>
 .pcap-analyzer {
     min-height: 93vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--nlb-gradient-primary);
     font-family:
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Header Section */
 .header-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--nlb-gradient-primary);
+    color: var(--nlb-text-light);
     padding: 4rem 2rem 3rem;
 }
 
@@ -579,7 +579,7 @@ onMounted(async () => {
     font-size: 3rem;
     font-weight: 700;
     margin: 0 0 1rem 0;
-    background: linear-gradient(45deg, #fff, #e3f2fd);
+    background: linear-gradient(45deg, var(--nlb-text-light), #e3f2fd);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -623,10 +623,10 @@ onMounted(async () => {
 
 .filter-chip {
     padding: 0.5rem 1rem;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--nlb-border-light);
     border-radius: 20px;
-    background: white;
-    color: #64748b;
+    background: var(--nlb-bg-primary);
+    color: var(--nlb-text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -634,20 +634,20 @@ onMounted(async () => {
 }
 
 .filter-chip:hover {
-    border-color: #6366f1;
-    color: #6366f1;
+    border-color: var(--nlb-primary);
+    color: var(--nlb-primary);
 }
 
 .filter-chip.active {
-    background: #6366f1;
-    border-color: #6366f1;
-    color: white;
+    background: var(--nlb-primary);
+    border-color: var(--nlb-primary);
+    color: var(--nlb-text-light);
 }
 
 .clear-filter {
     padding: 0.5rem 1rem;
-    background: #ef4444;
-    color: white;
+    background: var(--nlb-error);
+    color: var(--nlb-text-light);
     border: none;
     border-radius: 20px;
     font-size: 0.875rem;
@@ -656,12 +656,12 @@ onMounted(async () => {
 }
 
 .clear-filter:hover {
-    background: #dc2626;
+    background: var(--nlb-error-dark);
 }
 
 /* Table Section */
 .table-section {
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 0 0 16px 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     overflow: hidden;
@@ -669,7 +669,7 @@ onMounted(async () => {
 
 .table-header {
     padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--nlb-border-light);
     display: flex;
     flex-direction: row;
     justify-items: space-between;
@@ -687,11 +687,11 @@ onMounted(async () => {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--nlb-text-primary);
 }
 
 .results-count {
-    color: #64748b;
+    color: var(--nlb-text-secondary);
     font-size: 0.875rem;
 }
 
@@ -711,23 +711,23 @@ onMounted(async () => {
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #64748b;
+    color: var(--nlb-text-secondary);
     font-size: 1.1rem;
 }
 
 .search-input {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 3rem;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--nlb-border-light);
     border-radius: 12px;
     font-size: 1rem;
-    background: white;
+    background: var(--nlb-bg-primary);
     transition: all 0.2s ease;
 }
 
 .search-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--nlb-primary);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
@@ -740,26 +740,26 @@ onMounted(async () => {
 
 /* Modern Table Styling */
 .modern-table {
-    --primary-color: #6366f1;
-    --surface-ground: #ffffff;
-    --text-color: #1e293b;
+    --primary-color: var(--nlb-primary);
+    --surface-ground: var(--nlb-bg-primary);
+    --text-color: var(--nlb-text-primary);
 }
 
 .modern-table :deep(.p-datatable-header) {
-    background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
+    background: var(--nlb-bg-secondary);
+    border-bottom: 2px solid var(--nlb-border-light);
     padding: 1rem;
 }
 
 .modern-table :deep(.p-datatable-thead > tr > th) {
-    background: #f8fafc;
-    color: #374151;
+    background: var(--nlb-bg-secondary);
+    color: var(--nlb-text-primary);
     font-weight: 600;
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 1rem 0.75rem;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--nlb-border-light);
 }
 
 .modern-table :deep(.p-datatable-tbody > tr) {
@@ -767,20 +767,20 @@ onMounted(async () => {
 }
 
 .modern-table :deep(.p-datatable-tbody > tr:hover) {
-    background-color: #f1f5f9 !important;
+    background-color: var(--nlb-bg-tertiary) !important;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .modern-table :deep(.p-datatable-tbody > tr > td) {
     padding: 0.875rem 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--nlb-bg-tertiary);
 }
 
 /* Pagination Styling */
 .modern-table :deep(.p-paginator) {
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background: var(--nlb-bg-secondary);
+    border-top: 1px solid var(--nlb-border-light);
     padding: 1rem;
     display: flex;
     align-items: center;
@@ -800,9 +800,9 @@ onMounted(async () => {
 .modern-table :deep(.p-paginator .p-paginator-prev),
 .modern-table :deep(.p-paginator .p-paginator-next),
 .modern-table :deep(.p-paginator .p-paginator-last) {
-    background: white;
-    border: 1px solid #e2e8f0;
-    color: #64748b;
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
+    color: var(--nlb-text-secondary);
     min-width: 2.5rem;
     height: 2.5rem;
     display: flex;
@@ -819,35 +819,35 @@ onMounted(async () => {
 .modern-table :deep(.p-paginator .p-paginator-prev:hover),
 .modern-table :deep(.p-paginator .p-paginator-next:hover),
 .modern-table :deep(.p-paginator .p-paginator-last:hover) {
-    background: #6366f1;
-    border-color: #6366f1;
-    color: white;
+    background: var(--nlb-primary);
+    border-color: var(--nlb-primary);
+    color: var(--nlb-text-light);
 }
 
 .modern-table :deep(.p-paginator .p-paginator-page.p-highlight) {
-    background: #6366f1;
-    border-color: #6366f1;
-    color: white;
+    background: var(--nlb-primary);
+    border-color: var(--nlb-primary);
+    color: var(--nlb-text-light);
 }
 
 .modern-table :deep(.p-paginator .p-paginator-current) {
-    color: #374151;
+    color: var(--nlb-text-primary);
     font-size: 0.875rem;
     font-weight: 500;
 }
 
 .modern-table :deep(.p-paginator .p-dropdown) {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
     border-radius: 6px;
     padding: 0.5rem;
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--nlb-text-primary);
     min-width: 5rem;
 }
 
 .modern-table :deep(.p-paginator .p-dropdown:hover) {
-    border-color: #6366f1;
+    border-color: var(--nlb-primary);
 }
 
 .modern-table :deep(.p-paginator .p-dropdown .p-dropdown-label) {
@@ -856,7 +856,7 @@ onMounted(async () => {
 
 .modern-table :deep(.p-paginator .p-dropdown .p-dropdown-trigger) {
     width: 2rem;
-    color: #64748b;
+    color: var(--nlb-text-secondary);
 }
 
 /* Protocol badges */
@@ -869,35 +869,35 @@ onMounted(async () => {
 }
 
 .protocol-http {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: var(--nlb-protocol-http-bg);
+    color: var(--nlb-protocol-http);
 }
 .protocol-transport {
-    background: #f3e8ff;
-    color: #7c3aed;
+    background: var(--nlb-protocol-transport-bg);
+    color: var(--nlb-protocol-transport);
 }
 .protocol-dns {
-    background: #dcfce7;
-    color: #16a34a;
+    background: var(--nlb-protocol-dns-bg);
+    color: var(--nlb-protocol-dns);
 }
 .protocol-network {
-    background: #fef3c7;
-    color: #d97706;
+    background: var(--nlb-protocol-network-bg);
+    color: var(--nlb-protocol-network);
 }
 .protocol-security {
-    background: #fecaca;
-    color: #dc2626;
+    background: var(--nlb-protocol-security-bg);
+    color: var(--nlb-protocol-security);
 }
 .protocol-other {
-    background: #f1f5f9;
-    color: #64748b;
+    background: var(--nlb-protocol-other-bg);
+    color: var(--nlb-protocol-other);
 }
 
 /* Packet details */
 .packet-details {
     padding: 1.5rem;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background: var(--nlb-bg-secondary);
+    border-top: 1px solid var(--nlb-border-light);
 }
 
 .details-header {
@@ -909,14 +909,14 @@ onMounted(async () => {
 
 .details-header h3 {
     margin: 0;
-    color: #1e293b;
+    color: var(--nlb-text-primary);
     font-size: 1.1rem;
 }
 
 .copy-btn {
     padding: 0.5rem 1rem;
-    background: #6366f1;
-    color: white;
+    background: var(--nlb-primary);
+    color: var(--nlb-text-light);
     border: none;
     border-radius: 8px;
     font-size: 0.875rem;
@@ -925,12 +925,12 @@ onMounted(async () => {
 }
 
 .copy-btn:hover {
-    background: #5b5bd6;
+    background: var(--nlb-primary-dark);
 }
 
 .json-viewer {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -943,19 +943,19 @@ onMounted(async () => {
     line-height: 1.5;
     overflow-x: auto;
     white-space: pre-wrap;
-    color: #1e293b;
+    color: var(--nlb-text-primary);
 }
 
 /* Data styling */
 .packet-number {
     font-weight: 600;
-    color: #6366f1;
+    color: var(--nlb-primary);
 }
 
 .time-stamp {
     font-family: monospace;
     font-size: 0.875rem;
-    color: #64748b;
+    color: var(--nlb-text-secondary);
 }
 
 .ip-address {
@@ -967,7 +967,7 @@ onMounted(async () => {
 .packet-length {
     font-family: monospace;
     font-size: 0.875rem;
-    color: #64748b;
+    color: var(--nlb-text-secondary);
 }
 
 .packet-info {
@@ -982,14 +982,14 @@ onMounted(async () => {
     align-items: center;
     justify-content: center;
     padding: 3rem;
-    color: #64748b;
+    color: var(--nlb-text-secondary);
 }
 
 .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e2e8f0;
-    border-top: 3px solid #6366f1;
+    border: 3px solid var(--nlb-border-light);
+    border-top: 3px solid var(--nlb-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
