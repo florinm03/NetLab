@@ -31,6 +31,15 @@ def mesh_topology():
         network_controller.connect_node_to_network(
             network5, node5, node1, node2, node3, node4
         )
+
+        # Start tcpdump on all nodes
+        for node in [node1, node2, node3, node4, node5]:
+            node.start_tcpdump()
+
+        print("Mesh topology running... Press Ctrl+C to stop.")
+        network_controller.pcap_merge()
+    except KeyboardInterrupt:
+        pass
     finally:
         if network_controller:
             network_controller.stop_all_nodes()

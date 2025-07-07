@@ -32,9 +32,9 @@ def tree_topology():
 
         star1_central_node.start_tcpdump()
         star1_node1.start_tcpdump()
-        # star1_node2.start_tcpdump()
-        # star1_node3.start_tcpdump()
-        # star1_node4.start_tcpdump()
+        star1_node2.start_tcpdump()
+        star1_node3.start_tcpdump()
+        star1_node4.start_tcpdump()
 
         # Star 2
         star2_central_node = network_controller.create_node(base_name="star2_central")
@@ -63,9 +63,9 @@ def tree_topology():
 
         star2_central_node.start_tcpdump()
         star2_node1.start_tcpdump()
-        # star2_node2.start_tcpdump()
-        # star2_node3.start_tcpdump()
-        # star2_node4.start_tcpdump()
+        star2_node2.start_tcpdump()
+        star2_node3.start_tcpdump()
+        star2_node4.start_tcpdump()
 
         # Tree
         tree_central_node = network_controller.create_node(base_name="tree_central")

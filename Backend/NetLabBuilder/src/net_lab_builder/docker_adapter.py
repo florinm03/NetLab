@@ -62,13 +62,17 @@ class DockerAdapter:
         image = self.images["frr-node"]
         try:
             self.__logger.debug(f"Creating container {name} from image {image}")
+            
+            # Use the same volume name as in __init_pcap
+            volume_name = f"pcap_data_{self.__label}"
+            
             docker_container = self.__client.containers.create(
                 image=image,
                 name=name,
                 labels=[self.__label],
                 network_mode="none",
                 privileged=True,
-                volumes=["pcap_data:/pcap"],
+                volumes=[f"{volume_name}:/pcap"],
             )
             docker_container.start()
             return docker_container
@@ -338,23 +342,35 @@ class DockerAdapter:
                     
                 self.__pcap_merger.reload()
                 pcap_files = self.__get_pcap_files()
-                pcap_files_str = " ".join(pcap_files)
-                command = f"mergecap -w {_config['pcap_merge_target']} {pcap_files_str}"
-                self.__logger.info(
-                    f"Merge pcap files to {_config['pcap_merge_target']}: {pcap_files_str}"
-                )
-                try:
-                    self.__pcap_merger.exec_run(command)
-                except docker.errors.APIError as e:
-                    self.__logger.error(f"Error while merging pcap files: {e.explanation}")
-                    raise
-                except docker.errors.NotFound:
-                    self.__logger.error("PCAP merger container not found, stopping merge")
-                    break
+                
+                # Only attempt to merge if we have PCAP files
+                if pcap_files:
+                    pcap_files_str = " ".join(pcap_files)
+                    command = f"mergecap -w {_config['pcap_merge_target']} {pcap_files_str}"
+                    self.__logger.info(
+                        f"Merge pcap files to {_config['pcap_merge_target']}: {pcap_files_str}"
+                    )
+                    try:
+                        result = self.__pcap_merger.exec_run(command)
+                        if result[0] != 0:
+                            self.__logger.warning(f"Mergecap command returned non-zero exit code: {result[0]}")
+                            self.__logger.debug(f"Mergecap stderr: {result[1].decode('utf-8')}")
+                        else:
+                            self.__logger.info("PCAP files merged successfully")
+                    except docker.errors.APIError as e:
+                        self.__logger.error(f"Error while merging pcap files: {e.explanation}")
+                        # Don't raise here, just log and continue
+                    except docker.errors.NotFound:
+                        self.__logger.error("PCAP merger container not found, stopping merge")
+                        break
+                else:
+                    self.__logger.debug("No PCAP files found to merge, waiting...")
+                    
                 time.sleep(_config["pcap_merge_interval"])
             except Exception as e:
                 self.__logger.error(f"Unexpected error in pcap_merge: {str(e)}")
-                break
+                # Don't break on unexpected errors, just log and continue
+                time.sleep(_config["pcap_merge_interval"])
 
     def remove_container_from_none_network(self, container: DockerContainer) -> None:
         """
@@ -488,24 +504,34 @@ class DockerAdapter:
         This method scans all the containers managed by the current instance, excluding the one named '{self.__label}-pcap-merger',
         and attempts to locate a pcap file in the '/pcap' directory of each container. The pcap file is expected to have the same name as the container with a '.pcap' extension.
 
-        If a pcap file is found, its path is appended to the list of pcap file paths to be returned. If a pcap file is not found, a warning message is logged.
+        If a pcap file is found, its path is appended to the list of pcap file paths to be returned. If a pcap file is not found, a debug message is logged.
 
         Returns:
             List[str]: A list of paths to the pcap files found in the scanned containers.
         """
         pcap_files = []
-        for container in self.get_containers():
-            container.reload()
-            if container.status == "running":
-                if container.name != f"{self.__label}-pcap-merger":
-                    pcap_file_path = f"/pcap/{container.name}.pcap"
-                    pcap_file_ls = container.exec_run(f"ls {pcap_file_path}")
-                    if pcap_file_ls[0] == 0 and pcap_file_path in pcap_file_ls[
-                        1
-                    ].decode("utf-8"):
-                        pcap_files.append(f"/pcap/{container.name}.pcap")
-                    else:
-                        self.__logger.warning(
-                            f"pcap file {pcap_file_path} not found in container {container.name}"
-                        )
+        containers = self.get_containers()
+        
+        for container in containers:
+            try:
+                container.reload()
+                if container.status == "running":
+                    if container.name != f"{self.__label}-pcap-merger":
+                        pcap_file_path = f"/pcap/{container.name}.pcap"
+                        try:
+                            pcap_file_ls = container.exec_run(f"ls {pcap_file_path}")
+                            if pcap_file_ls[0] == 0 and pcap_file_path in pcap_file_ls[1].decode("utf-8"):
+                                pcap_files.append(f"/pcap/{container.name}.pcap")
+                                self.__logger.debug(f"Found PCAP file: {pcap_file_path}")
+                            else:
+                                self.__logger.debug(
+                                    f"PCAP file {pcap_file_path} not found in container {container.name} (exit code: {pcap_file_ls[0]})"
+                                )
+                        except docker.errors.APIError as e:
+                            self.__logger.debug(f"Error checking PCAP file in container {container.name}: {e}")
+                        except Exception as e:
+                            self.__logger.debug(f"Unexpected error checking PCAP file in container {container.name}: {e}")
+            except Exception as e:
+                self.__logger.debug(f"Error processing container {container.name}: {e}")
+                
         return pcap_files

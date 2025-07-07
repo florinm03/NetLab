@@ -1,6 +1,7 @@
 from typing import Any
 import docker
 import docker.errors
+import time
 from docker.models.containers import ExecResult, Container
 from docker.models.networks import Network as DockerNetwork
 
@@ -105,9 +106,30 @@ class Node:
 
     def start_tcpdump(self) -> None:
         self.__logger.info(f"Starting tcpdump for {self.name}")
-        self.container.exec_run(
-            f"tcpdump -i any -w /pcap/{self.name}.pcap", detach=True
-        )
+        try:
+            # Ensure the pcap directory exists
+            self.container.exec_run("mkdir -p /pcap")
+            
+            # Start tcpdump in detached mode
+            result = self.container.exec_run(
+                f"tcpdump -i any -w /pcap/{self.name}.pcap", detach=True
+            )
+            
+            # Check if tcpdump started successfully
+            if result[0] != 0:
+                self.__logger.warning(f"tcpdump may not have started properly for {self.name}")
+            else:
+                self.__logger.info(f"tcpdump started successfully for {self.name}")
+                
+            # Small delay to ensure tcpdump has time to initialize
+            time.sleep(0.5)
+                
+        except docker.errors.APIError as e:
+            self.__logger.error(f"Error starting tcpdump for {self.name}: {e}")
+            raise ValueError(f"Server error while starting tcpdump for {self.name}")
+        except Exception as e:
+            self.__logger.error(f"Unexpected error starting tcpdump for {self.name}: {e}")
+            raise ValueError(f"Error starting tcpdump for {self.name}")
 
     def get_logs(self) -> Any:
         try:

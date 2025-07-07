@@ -50,13 +50,23 @@ Of course you can write your own topologies and run them with the same command.
 In the future this code will be packaged as a Python package and will be available on PyPI. Then you can install it with `pip install netlabbuilder` and use it as a Python package.
 
 ### Pcap Files
-The topologies will create pcap files in a docker volume. To find these files (e.g. to open with Wireshark) you can run the following command:
+The topologies will create pcap files in a docker volume. All topologies now properly capture and merge PCAP files. The following improvements have been made:
+
+- **Mesh topology**: Added missing PCAP capture functionality
+- **Tree topology**: Enabled PCAP capture on all nodes (previously some were commented out)
+- **Robust PCAP merging**: Improved error handling and logging in the PCAP merger
+- **Volume consistency**: Fixed volume naming to ensure proper file sharing between containers
+- **Better error handling**: Added comprehensive error handling for PCAP operations
+
+To find these files (e.g. to open with Wireshark) you can run the following command:
 
 #### Linux
 
 ```bash
-docker volume inspect pcap_data
+docker volume inspect pcap_data_prototype
 ```
+
+Note: The volume name includes the label (default is "prototype"), so the actual volume name will be `pcap_data_prototype` or `pcap_data_<your-label>`.
 
 The output will be something like this and you can find the pcap files in the `Mountpoint` directory:
 
@@ -66,8 +76,8 @@ The output will be something like this and you can find the pcap files in the `M
         "CreatedAt": "2023-07-06T10:19:41Z",
         "Driver": "local",
         "Labels": null,
-        "Mountpoint": "/var/lib/docker/volumes/pcap_data/_data",
-        "Name": "pcap_data",
+        "Mountpoint": "/var/lib/docker/volumes/pcap_data_prototype/_data",
+        "Name": "pcap_data_prototype",
         "Options": null,
         "Scope": "local"
     }
@@ -82,6 +92,15 @@ For Windows there is still no reliable way to mount the volume to your Windows f
 ```
 
 If you have trouble finding your volumes in Windows, I refer to this [GitHub issue](https://github.com/microsoft/WSL/discussions/4176) or this [Blog post](https://dev.to/kim-ch/move-docker-desktop-data-distro-out-of-system-drive-4cg2).
+
+### Testing PCAP Functionality
+To test that PCAP functionality is working correctly, you can run the test script:
+
+```bash
+python3 test_pcap.py
+```
+
+This will create a simple 2-node topology, start PCAP capture, and run for 10 seconds to verify that PCAP files are being created and merged properly.
 
 
 ## License
