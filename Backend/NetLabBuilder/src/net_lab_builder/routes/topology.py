@@ -38,4 +38,34 @@ def start_topology():
             'status': 'error',
             'message': str(e),
             'details': 'Check server logs for more information'
-        }), 500 
+        }), 500
+
+@topology_bp.route('/node-routing/<node_id>', methods=['GET'])
+def get_node_routing(node_id):
+    """Get routing table for a specific node"""
+    try:
+        result = topology_service.get_node_routing(node_id)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Failed to get routing table for node {node_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@topology_bp.route('/delete-node/<user_id>/<node_id>', methods=['DELETE'])
+def delete_node(user_id, node_id):
+    """Delete a specific node from user's topology"""
+    try:
+        result = topology_service.delete_node(user_id, node_id)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Failed to delete node {node_id} for user {user_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@topology_bp.route('/clear-topology/<user_id>', methods=['DELETE'])
+def clear_topology(user_id):
+    """Clear all nodes for a user's topology"""
+    try:
+        result = topology_service.clear_topology(user_id)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Failed to clear topology for user {user_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500 

@@ -102,4 +102,126 @@ class TopologyService:
 
         except Exception as e:
             logger.error(f"Topology start failed: {str(e)}")
+            raise
+
+    def get_node_routing(self, node_id):
+        """Get routing table for a specific node"""
+        try:
+            # Find the container by node_id
+            containers = self.client.containers.list(
+                filters={'name': node_id}
+            )
+            
+            if not containers:
+                return {
+                    'status': 'error',
+                    'message': f'Node {node_id} not found'
+                }
+            
+            container = containers[0]
+            
+            # Execute netstat -r command in the container
+            result = container.exec_run('netstat -r')
+            
+            if result.exit_code != 0:
+                return {
+                    'status': 'error',
+                    'message': f'Failed to get routing table: {result.output.decode("utf-8")}'
+                }
+            
+            # Parse the routing table output
+            routes = self.parse_netstat_output(result.output.decode('utf-8'))
+            
+            return {
+                'status': 'success',
+                'node_id': node_id,
+                'routes': routes
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get routing table for node {node_id}: {str(e)}")
+            raise
+
+    def parse_netstat_output(self, output):
+        """Parse netstat -r output into structured data"""
+        routes = []
+        lines = output.strip().split('\n')
+        
+        # Skip header lines
+        for line in lines:
+            if line.startswith('Kernel') or line.startswith('Destination') or not line.strip():
+                continue
+            
+            parts = line.split()
+            if len(parts) >= 6:
+                routes.append({
+                    'destination': parts[0],
+                    'gateway': parts[1],
+                    'genmask': parts[2],
+                    'flags': parts[3],
+                    'mss': parts[4],
+                    'window': parts[5],
+                    'irtt': parts[6] if len(parts) > 6 else '',
+                    'iface': parts[7] if len(parts) > 7 else ''
+                })
+        
+        return routes
+
+    def delete_node(self, user_id, node_id):
+        """Delete a specific node from user's topology"""
+        try:
+            # Find the container by node_id
+            containers = self.client.containers.list(
+                filters={'name': node_id}
+            )
+            
+            if not containers:
+                return {
+                    'status': 'error',
+                    'message': f'Node {node_id} not found'
+                }
+            
+            container = containers[0]
+            
+            # Stop and remove the container
+            container.stop()
+            container.remove()
+            
+            logger.info(f"Node {node_id} deleted for user {user_id}")
+            
+            return {
+                'status': 'success',
+                'message': f'Node {node_id} deleted successfully'
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to delete node {node_id} for user {user_id}: {str(e)}")
+            raise
+
+    def clear_topology(self, user_id):
+        """Clear all nodes for a user's topology"""
+        try:
+            # Get all containers for this user
+            containers = self.client.containers.list(
+                filters={'name': f'{user_id}'}
+            )
+            
+            deleted_count = 0
+            for container in containers:
+                try:
+                    container.stop()
+                    container.remove()
+                    deleted_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to delete container {container.name}: {str(e)}")
+            
+            logger.info(f"Cleared topology for user {user_id}, deleted {deleted_count} containers")
+            
+            return {
+                'status': 'success',
+                'message': f'Topology cleared successfully, deleted {deleted_count} nodes'
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to clear topology for user {user_id}: {str(e)}")
             raise 

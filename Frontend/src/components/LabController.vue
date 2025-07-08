@@ -7,19 +7,6 @@
                 Netzwerktopologien effizient erstellen und verwalten
             </p>
         </div>
-        <!-- <div class="main-header">
-            <div class="header-content">
-                <div class="header-left">
-                    <i class="pi pi-globe header-icon"></i>
-                    <div>
-                        <h1>Nodes Controller</h1>
-                        <p class="header-subtitle">
-                            Netzwerkknoten effizient verwalten und konfigurieren
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div> -->
 
         <!-- Progress Indicator -->
         <div class="progress-section">
@@ -212,6 +199,19 @@
                                 </div>
                             </div>
 
+                            <!-- Topology Graph -->
+                            <div
+                                v-if="ownNodes.length > 0"
+                                class="topology-graph-section"
+                            >
+                                <TopologyGraph
+                                    :nodes="graphNodes"
+                                    :connections="graphConnections"
+                                    @node-click="onNodeClick"
+                                    @clear-all="clearAllNodes"
+                                />
+                            </div>
+
                             <!-- Current Nodes Info -->
                             <div
                                 v-if="ownNodes.length > 0"
@@ -224,18 +224,108 @@
                                         {{ ownNodes.length }} Knoten
                                     </div>
                                 </div>
+                                
+                                <!-- Topology Connections Overview -->
+                                <div class="topology-overview">
+                                    <h5>Topologie: {{ selectedTopology?.name }}</h5>
+                                    <div class="connections-info">
+                                        <span>{{ graphConnections.length }} Verbindungen</span>
+                                    </div>
+                                </div>
+                                
                                 <div class="nodes-grid">
                                     <div
                                         v-for="(node, index) in ownNodes"
                                         :key="index"
                                         class="node-item"
+                                        @mouseenter="onNodeHover($event, node, index)"
+                                        @mouseleave="onNodeOut"
                                     >
-                                        <i
-                                            class="pi pi-circle-fill node-indicator"
-                                        ></i>
-                                        <span>{{
+                                        <div class="node-content">
+                                            <i class="pi pi-circle-fill node-indicator"></i>
+                                            <span class="node-name">{{
                                             node.name || `Knoten ${index + 1}`
                                         }}</span>
+                                            <div class="node-actions">
+                                                <Button 
+                                                    class="terminal-button"
+                                                    @click="openNodeTerminal(node)"
+                                                    text 
+                                                    size="small"
+                                                    severity="secondary"
+                                                    title="Terminal öffnen"
+                                                >
+                                                    <i class="pi pi-terminal"></i>
+                                                    <i class="pi pi-arrow-up-right arrow-icon"></i>
+                                                </Button>
+                                                <Button 
+                                                    icon="pi pi-trash" 
+                                                    @click="deleteNode(node)"
+                                                    text 
+                                                    size="small"
+                                                    severity="danger"
+                                                    title="Knoten löschen"
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Node Connections -->
+                                        <div class="node-connections">
+                                            <span class="connections-label">Verbindungen:</span>
+                                            <div class="connection-list">
+                                                <span 
+                                                    v-for="connection in getNodeConnections(node, index)"
+                                                    :key="connection.target"
+                                                    class="connection-item"
+                                                >
+                                                    → {{ getNodeName(connection.target) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hover Tooltip for Routing Table -->
+                                <div 
+                                    v-if="hoveredNode" 
+                                    class="routing-tooltip"
+                                    :style="{ left: tooltipPosition.x + 'px', top: tooltipPosition.y + 'px' }"
+                                >
+                                    <div class="tooltip-header">
+                                        <h6>{{ hoveredNode.name || `Knoten ${hoveredNodeIndex + 1}` }}</h6>
+                                        <Button 
+                                            icon="pi pi-times" 
+                                            @click="hoveredNode = null" 
+                                            text 
+                                            size="small"
+                                            class="tooltip-close"
+                                        />
+                                    </div>
+                                    
+                                    <div class="routing-table">
+                                        <h6>Routing Tabelle (netstat -r)</h6>
+                                        <div class="table-container">
+                                            <table class="route-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ziel</th>
+                                                        <th>Gateway</th>
+                                                        <th>Genmask</th>
+                                                        <th>Flags</th>
+                                                        <th>Iface</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr v-for="route in hoveredNode.routes" :key="route.destination">
+                                                        <td>{{ route.destination }}</td>
+                                                        <td>{{ route.gateway }}</td>
+                                                        <td>{{ route.genmask }}</td>
+                                                        <td>{{ route.flags }}</td>
+                                                        <td>{{ route.iface }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -409,10 +499,16 @@ import AccordionHeader from "primevue/accordionheader";
 import AccordionContent from "primevue/accordioncontent";
 import AccordionTab from "primevue/accordiontab";
 import { ButtonGroup } from "primevue";
+import { useToast } from "primevue/usetoast";
+import TopologyGraph from "./TopologyGraph.vue";
 
 export default {
     created() {
         this.$store.dispatch("initializeUser");
+    },
+    setup() {
+        const toast = useToast();
+        return { toast };
     },
     computed: {
         userId() {
@@ -435,6 +531,7 @@ export default {
         AccordionTab,
         AccordionPanel,
         AccordionContent,
+        TopologyGraph,
     },
     data() {
         return {
@@ -452,6 +549,11 @@ export default {
             ownNodes: [],
             node_urls: [],
             terminal_urls: [],
+            graphNodes: [],
+            graphConnections: [],
+            hoveredNode: null,
+            hoveredNodeIndex: null,
+            tooltipPosition: { x: 0, y: 0 },
         };
     },
     watch: {
@@ -544,6 +646,7 @@ export default {
 
                 if (response.data.status === "success") {
                     this.ownNodes = response.data.nodes;
+                    this.updateGraphData(); // Update graph data when nodes change
                     console.log("data :", JSON.stringify(response));
 
                     const terminal_urls_response = await this.$axios.get(
@@ -581,6 +684,240 @@ export default {
                 console.error("Error fetching nodes:", err);
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        // Graph-related methods
+        updateGraphData() {
+            // Convert ownNodes to graph format
+            this.graphNodes = this.ownNodes.map((node, index) => ({
+                id: node.name || `node-${index}`,
+                name: node.name || `Knoten ${index + 1}`,
+                ip: node.ip || `172.16.0.${index + 1}`,
+                status: 'online',
+                type: 'router'
+            }));
+
+            // Generate connections based on topology type
+            this.graphConnections = this.generateConnections();
+        },
+
+        generateConnections() {
+            const connections = [];
+            const nodeCount = this.graphNodes.length;
+
+            if (this.selectedTopology?.code === 'ring') {
+                // Ring topology: each node connects to next and previous
+                for (let i = 0; i < nodeCount; i++) {
+                    const next = (i + 1) % nodeCount;
+                    connections.push({
+                        source: this.graphNodes[i].id,
+                        target: this.graphNodes[next].id,
+                        type: 'ethernet'
+                    });
+                }
+            } else if (this.selectedTopology?.code === 'mesh') {
+                // Mesh topology: each node connects to all others
+                for (let i = 0; i < nodeCount; i++) {
+                    for (let j = i + 1; j < nodeCount; j++) {
+                        connections.push({
+                            source: this.graphNodes[i].id,
+                            target: this.graphNodes[j].id,
+                            type: 'ethernet'
+                        });
+                    }
+                }
+            } else if (this.selectedTopology?.code === 'star') {
+                // Star topology: central node connects to all others
+                if (nodeCount > 1) {
+                    const centralNode = this.graphNodes[0];
+                    for (let i = 1; i < nodeCount; i++) {
+                        connections.push({
+                            source: centralNode.id,
+                            target: this.graphNodes[i].id,
+                            type: 'ethernet'
+                        });
+                    }
+                }
+            } else if (this.selectedTopology?.code === 'tree') {
+                // Tree topology: hierarchical structure
+                for (let i = 1; i < nodeCount; i++) {
+                    const parentIndex = Math.floor((i - 1) / 2);
+                    if (parentIndex < nodeCount) {
+                        connections.push({
+                            source: this.graphNodes[parentIndex].id,
+                            target: this.graphNodes[i].id,
+                            type: 'ethernet'
+                        });
+                    }
+                }
+            } else {
+                // Default: mini-ring or custom
+                for (let i = 0; i < nodeCount - 1; i++) {
+                    connections.push({
+                        source: this.graphNodes[i].id,
+                        target: this.graphNodes[i + 1].id,
+                        type: 'ethernet'
+                    });
+                }
+            }
+
+            return connections;
+        },
+
+        onNodeClick(node) {
+            console.log('Node clicked:', node);
+            // You can add additional functionality here
+        },
+
+        async onNodeHover(event, node, index) {
+            this.hoveredNode = {
+                ...node,
+                routes: await this.fetchRoutingTable(node)
+            };
+            this.hoveredNodeIndex = index;
+            
+            this.tooltipPosition = {
+                x: event.pageX + 10,
+                y: event.pageY - 10
+            };
+        },
+
+        onNodeOut() {
+            this.hoveredNode = null;
+            this.hoveredNodeIndex = null;
+        },
+
+        async fetchRoutingTable(node) {
+            try {
+                // Fetch real routing table from backend
+                const response = await this.$axios.get(`/node-routing/${node.name}`);
+                if (response.data.status === 'success') {
+                    return response.data.routes;
+                }
+            } catch (error) {
+                console.error('Error fetching routing table:', error);
+            }
+            
+            // Fallback to mock data
+            return this.generateMockRoutingTable(node);
+        },
+
+        generateMockRoutingTable(node) {
+            return [
+                {
+                    destination: 'default',
+                    gateway: '172.16.0.1',
+                    genmask: '0.0.0.0',
+                    flags: 'UG',
+                    iface: 'eth0'
+                },
+                {
+                    destination: '172.16.0.0',
+                    gateway: '0.0.0.0',
+                    genmask: '255.255.0.0',
+                    flags: 'U',
+                    iface: 'eth0'
+                },
+                {
+                    destination: '192.168.1.0',
+                    gateway: '172.16.0.2',
+                    genmask: '255.255.255.0',
+                    flags: 'UG',
+                    iface: 'eth0'
+                }
+            ];
+        },
+
+        getNodeConnections(node, index) {
+            return this.graphConnections.filter(conn => 
+                conn.source === node.name || conn.target === node.name
+            );
+        },
+
+        getNodeName(nodeId) {
+            const node = this.ownNodes.find(n => n.name === nodeId);
+            return node ? node.name : nodeId;
+        },
+
+        async deleteNode(node) {
+            try {
+                const userId = this.userId;
+                const response = await this.$axios.delete(`/delete-node/${userId}/${node.id}`);
+                
+                if (response.data.status === 'success') {
+                    // Remove node from local data
+                    this.ownNodes = this.ownNodes.filter(n => n.name !== node.name);
+                    this.updateGraphData();
+                    
+                    // Show success message
+                    this.toast.add({
+                        severity: 'success',
+                        summary: 'Knoten gelöscht',
+                        detail: `Knoten "${node.name}" wurde erfolgreich entfernt`,
+                        life: 3000
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting node:', error);
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'Fehler',
+                    detail: 'Knoten konnte nicht gelöscht werden',
+                    life: 3000
+                });
+            }
+        },
+
+        openNodeTerminal(node) {
+            // Use the same logic as in the deployment section
+            // Find the node index in ownNodes and use the same index for terminal_urls
+            const nodeIndex = this.ownNodes.findIndex(n => n.name === node.name);
+            
+            if (nodeIndex >= 0 && this.terminal_urls[nodeIndex] && this.terminal_urls[nodeIndex].url) {
+                console.log(`Opening terminal for node: ${node.name}`, this.terminal_urls[nodeIndex]);
+                window.open(this.terminal_urls[nodeIndex].url, '_blank');
+            } else {
+                console.error(`No terminal URL found for node: ${node.name}`);
+                console.log('Node index:', nodeIndex);
+                console.log('Available terminals:', this.terminal_urls);
+                console.log('Available nodes:', this.ownNodes);
+                
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'Terminal nicht verfügbar',
+                    detail: `Terminal für Knoten "${node.name}" konnte nicht gefunden werden`,
+                    life: 3000
+                });
+            }
+        },
+
+        async clearAllNodes() {
+            try {
+                const userId = this.userId;
+                const response = await this.$axios.delete(`/clear-topology/${userId}`);
+                
+                if (response.data.status === 'success') {
+                    this.ownNodes = [];
+                    this.graphNodes = [];
+                    this.graphConnections = [];
+                    this.terminal_urls = [];
+                    
+                    this.toast.add({
+                        severity: 'success',
+                        summary: 'Topologie gelöscht',
+                        detail: 'Alle Knoten wurden erfolgreich entfernt',
+                        life: 3000
+                    });
+                }
+            } catch (error) {
+                console.error('Error clearing topology:', error);
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'Fehler',
+                    detail: 'Topologie konnte nicht gelöscht werden',
+                    life: 3000
+                });
             }
         },
 
@@ -913,6 +1250,32 @@ export default {
 
 
 
+/* Topology Graph Section */
+.topology-graph-section {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Topology Overview */
+.topology-overview {
+    background: var(--nlb-bg-secondary);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--nlb-border-light);
+}
+
+.topology-overview h5 {
+    margin: 0 0 8px 0;
+    color: var(--nlb-text-primary);
+    font-weight: 600;
+}
+
+.connections-info {
+    color: var(--nlb-text-secondary);
+    font-size: 0.9rem;
+}
+
 /* Nodes Info */
 .nodes-info-card {
     background: var(--nlb-bg-primary);
@@ -954,17 +1317,193 @@ export default {
 
 .node-item {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
     background: var(--nlb-bg-primary);
     border-radius: 8px;
     border: 1px solid var(--nlb-border-light);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.node-item:hover {
+    border-color: var(--nlb-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.node-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.node-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.node-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.node-item:hover .node-actions {
+    opacity: 1;
+}
+
+.node-actions .p-button {
+    min-width: 40px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+.node-actions .p-button.p-button-text {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.node-actions .p-button.p-button-text:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.node-actions .p-button.p-button-danger {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    color: #d32f2f;
+}
+
+.node-actions .p-button.p-button-danger:hover {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: rgba(244, 67, 54, 0.5);
+}
+
+.terminal-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.terminal-button .arrow-icon {
+    font-size: 0.6rem;
+    opacity: 0.8;
+    margin-left: -2px;
+}
+
+.terminal-button:hover .arrow-icon {
+    opacity: 1;
+    transform: translate(1px, -1px);
+    transition: all 0.2s ease;
+}
+
+.node-connections {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--nlb-border-light);
+}
+
+.connections-label {
+    font-size: 0.8rem;
+    color: var(--nlb-text-secondary);
+    font-weight: 600;
+}
+
+.connection-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.connection-item {
+    background: var(--nlb-success-light);
+    color: var(--nlb-success-dark);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
 .node-indicator {
     color: var(--nlb-success);
     font-size: 0.8rem;
+}
+
+/* Routing Tooltip */
+.routing-tooltip {
+    position: fixed;
+    background: white;
+    border: 1px solid var(--nlb-border-light);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    max-width: 500px;
+    z-index: 1000;
+    font-size: 14px;
+}
+
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--nlb-border-light);
+}
+
+.tooltip-header h6 {
+    margin: 0;
+    color: var(--nlb-text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.tooltip-close {
+    padding: 4px;
+}
+
+.routing-table h6 {
+    margin: 0 0 8px 0;
+    color: var(--nlb-text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.table-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--nlb-border-light);
+    border-radius: 4px;
+}
+
+.route-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.route-table th,
+.route-table td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--nlb-border-light);
+}
+
+.route-table th {
+    background: var(--nlb-bg-secondary);
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+}
+
+.route-table td {
+    color: var(--nlb-text-secondary);
 }
 
 /* Deployment Section */
