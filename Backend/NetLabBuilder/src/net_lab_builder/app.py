@@ -357,7 +357,7 @@ def init_ttyd_session():
             value=session_id,
             max_age=86400,
             httponly=True,
-            secure=False,  # True in production with HTTPS
+            secure=False,  # TODO? True in production with HTTPS
             samesite='Lax'
         )
         return response
@@ -383,9 +383,34 @@ def make_session_response(session_id, port):
     )
     return response
 
+def find_ttyd():
+    """Find ttyd executable in common locations"""
+    import shutil
+    import os
+    
+    # Common paths where ttyd might be installed, if not found. 
+    common_paths = [
+        'ttyd',  # If it's in PATH
+        '/opt/homebrew/bin/ttyd',  # macOS Apple Silicon
+        '/usr/local/bin/ttyd',     # macOS Intel, Linux
+        '/usr/bin/ttyd',           # Linux system-wide
+        '/snap/bin/ttyd',          # Ubuntu snap
+        os.path.expanduser('~/.local/bin/ttyd'),  # User local
+    ]
+    
+    for path in common_paths:
+        if shutil.which(path) or os.path.exists(path):
+            return path
+    
+    return None
+
 def start_ttyd_process(container_name, port):
+    ttyd_path = find_ttyd()
+    if not ttyd_path:
+        raise RuntimeError("ttyd not found. Please install ttyd first. See setup instructions.")
+    
     subprocess.Popen([
-        'ttyd', '--writable', '-p', str(port),
+        ttyd_path, '--writable', '-p', str(port),
         '-t', 'enableTrzsz=true',
         '-t', 'enableZmodem=true',
         '-t', 'termType=xterm-256color',
