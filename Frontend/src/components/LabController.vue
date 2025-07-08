@@ -2,9 +2,9 @@
     <div class="lab-controller-container">
         <!-- Main Header -->
         <div class="header-section">
-            <h1 class="page-title">Nodes Controller</h1>
+            <h1 class="page-title">Topologie Erstellen</h1>
             <p class="page-description">
-                Netzwerkknoten effizient verwalten und konfigurieren
+                Netzwerktopologien effizient erstellen und verwalten
             </p>
         </div>
         <!-- <div class="main-header">
@@ -84,8 +84,7 @@
                             <div class="step-header">
                                 <h3>Selektion der Netzwerktopologie</h3>
                                 <p>
-                                    Wählen Sie die Netzwerktopologie, die Ihren
-                                    Testanforderungen am besten entspricht.
+                                    Wählen Sie die Netzwerktopologie, die Ihren Testanforderungen am besten entspricht.
                                 </p>
                             </div>
 
@@ -105,7 +104,7 @@
                                     <template #footer>
                                         <div class="select-footer">
                                             <Button
-                                                label="Create Custom Topology"
+                                                label="Benutzerdefinierte Topologie erstellen"
                                                 fluid
                                                 severity="secondary"
                                                 text
@@ -130,8 +129,7 @@
                                                 }}</strong
                                             >
                                             <p>
-                                                Diese Topologie wird im nächsten
-                                                Schritt konfiguriert.
+                                                Diese Topologie wird im nächsten Schritt konfiguriert.
                                             </p>
                                         </div>
                                     </div>
@@ -161,39 +159,13 @@
                             <div class="step-header">
                                 <h3>Topologiekonfiguration</h3>
                                 <p>
-                                    Richten Sie Ihre Netzwerkumgebung ein und
-                                    starten Sie die Laborsitzung.
+                                    Richten Sie Ihre Netzwerkumgebung ein und erstellen Sie Ihre Topologie.
                                 </p>
                             </div>
 
                             <div class="config-grid">
-                                <!-- Lab Session Card -->
-                                <div class="config-card">
-                                    <div class="card-header">
-                                        <i class="pi pi-play-circle"></i>
-                                        <h4>Terminal Session</h4>
-                                    </div>
-                                    <div class="card-content">
-                                        <Button
-                                            label="Start TTYD Session"
-                                            icon="pi pi-play"
-                                            @click="startLab"
-                                            :disabled="isLoading"
-                                            :loading="isLoading"
-                                            class="action-button"
-                                        />
-
-                                        <div v-if="error" class="error-message">
-                                            <i
-                                                class="pi pi-exclamation-triangle"
-                                            ></i>
-                                            {{ error }}
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Topology Management Card -->
-                                <div class="config-card">
+                                <div class="config-card primary-card">
                                     <div class="card-header">
                                         <i class="pi pi-network"></i>
                                         <h4>Topologie Management</h4>
@@ -203,7 +175,8 @@
                                             label="Topologie erstellen"
                                             icon="pi pi-plus-circle"
                                             @click="createTopology"
-                                            class="action-button secondary"
+                                            :loading="isLoading"
+                                            class="action-button primary"
                                         />
                                         <Button
                                             label="Aktive Nodes abfragen"
@@ -213,65 +186,28 @@
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Active Session Info -->
-                            <div v-if="container" class="session-info-card">
-                                <div class="session-header">
-                                    <i class="pi pi-server"></i>
-                                    <h4>Aktive Sitzung</h4>
-                                    <div
-                                        class="status-badge"
-                                        :class="
-                                            container.details.status.toLowerCase()
-                                        "
-                                    >
-                                        {{ container.details.status }}
+                                <!-- Status Card -->
+                                <div class="config-card status-card">
+                                    <div class="card-header">
+                                        <i class="pi pi-chart-line"></i>
+                                        <h4>System Status</h4>
                                     </div>
-                                </div>
-
-                                <div class="session-details">
-                                    <div class="detail-item">
-                                        <strong>Container:</strong>
-                                        {{ container.container_name }}
-                                    </div>
-                                </div>
-
-                                <div
-                                    v-if="terminalUrl"
-                                    class="terminal-section"
-                                >
-                                    <div class="terminal-header">
-                                        <h5>Terminalzugang</h5>
-                                        <Button
-                                            v-if="!embedTerminal"
-                                            label="Open in New Tab"
-                                            icon="pi pi-external-link"
-                                            @click="openTerminal"
-                                            size="small"
-                                            text
-                                        />
-                                    </div>
-
-                                    <div class="terminal-container">
-                                        <iframe
-                                            :src="String(terminalUrl)"
-                                            class="terminal-iframe"
-                                            title="Container Terminal"
-                                            ref="terminalIframe"
-                                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                                            @load="onIframeLoad"
-                                            @error="onIframeError"
-                                        ></iframe>
-                                    </div>
-
-                                    <div
-                                        v-if="isConnectingTerminal"
-                                        class="connecting-message"
-                                    >
-                                        <i class="pi pi-spin pi-spinner"></i>
-                                        Verbindung zum Terminal wird
-                                        hergestellt...
+                                    <div class="card-content">
+                                        <div class="status-item">
+                                            <span class="status-label">Topologie:</span>
+                                            <span class="status-value">{{ selectedTopology?.name || 'Nicht ausgewählt' }}</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status-label">Aktive Nodes:</span>
+                                            <span class="status-value">{{ ownNodes.length }}</span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status-label">Status:</span>
+                                            <span class="status-value" :class="ownNodes.length > 0 ? 'status-active' : 'status-inactive'">
+                                                {{ ownNodes.length > 0 ? 'Aktiv' : 'Inaktiv' }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -285,7 +221,7 @@
                                     <i class="pi pi-sitemap"></i>
                                     <h4>Aktive Netzwerkknoten</h4>
                                     <div class="node-count">
-                                        {{ ownNodes.length }} nodes
+                                        {{ ownNodes.length }} Knoten
                                     </div>
                                 </div>
                                 <div class="nodes-grid">
@@ -298,10 +234,18 @@
                                             class="pi pi-circle-fill node-indicator"
                                         ></i>
                                         <span>{{
-                                            node.name || `Node ${index + 1}`
+                                            node.name || `Knoten ${index + 1}`
                                         }}</span>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div v-else-if="!isLoading" class="empty-state">
+                                <i class="pi pi-info-circle"></i>
+                                <h4>Keine aktiven Nodes</h4>
+                                <p>
+                                    Klicken Sie auf "Topologie erstellen", um Ihr Netzwerk aufzubauen.
+                                </p>
                             </div>
 
                             <div class="step-actions">
@@ -315,6 +259,7 @@
                                     label="Weiter zur Bereitstellung"
                                     icon="pi pi-arrow-right"
                                     @click="nextStep"
+                                    :disabled="ownNodes.length === 0"
                                     class="primary-button"
                                 />
                             </div>
@@ -332,8 +277,7 @@
                             <div class="step-header">
                                 <h3>Topologiebereitstellung</h3>
                                 <p>
-                                    Greifen Sie auf Ihre bereitgestellten
-                                    Netzwerkknoten zu und verwalten Sie sie.
+                                    Greifen Sie auf Ihre bereitgestellten Netzwerkknoten zu und verwalten Sie sie.
                                 </p>
                             </div>
 
@@ -369,11 +313,9 @@
                                 class="terminals-section"
                             >
                                 <div class="terminals-header">
-                                    <h4>Node Terminals</h4>
+                                    <h4>Knoten Terminals</h4>
                                     <p>
-                                        Klicken Sie auf einen beliebigen Knoten,
-                                        um auf dessen Terminalschnittstelle
-                                        zuzugreifen.
+                                        Klicken Sie auf einen beliebigen Knoten, um auf dessen Terminalschnittstelle zuzugreifen.
                                     </p>
                                 </div>
 
@@ -390,7 +332,7 @@
                                             <div class="accordion-header">
                                                 <i class="pi pi-desktop"></i>
                                                 <span
-                                                    >Node {{ index + 1 }}</span
+                                                    >Knoten {{ index + 1 }}</span
                                                 >
                                                 <div class="node-status online">
                                                     Online
@@ -401,7 +343,7 @@
                                         <div class="terminal-wrapper">
                                             <div class="terminal-info">
                                                 <p>
-                                                    Terminal access for Node
+                                                    Terminalzugang für Knoten
                                                     {{ index + 1 }}
                                                 </p>
                                             </div>
@@ -422,8 +364,7 @@
                                 <i class="pi pi-info-circle"></i>
                                 <h4>Keine Knoten verfügbar</h4>
                                 <p>
-                                    Bitte gehen Sie zurück und erstellen Sie
-                                    Ihre Topologie zuerst.
+                                    Bitte gehen Sie zurück und erstellen Sie Ihre Topologie zuerst.
                                 </p>
                             </div>
 
@@ -498,17 +439,8 @@ export default {
     data() {
         return {
             isLoading: false,
-            refreshInterval: null,
-            error: null,
-            container: null,
-            terminalUrl: null,
-            embedTerminal: true,
-            isConnectingTerminal: false,
-            connectionAttempts: 0,
-            maxConnectionAttempts: 5,
             selectedTopology: null,
             activeStep: "1",
-            connectionRetryDelay: 500,
             topologies: [
                 { name: "Mini-Ring", code: "mini_ring" },
                 { name: "Ring", code: "ring" },
@@ -559,9 +491,6 @@ export default {
         resetStepper() {
             this.activeStep = "1";
             this.selectedTopology = null;
-            this.container = null;
-            this.terminalUrl = null;
-            this.error = null;
             this.isLoading = false;
         },
         // startAutoRefresh() {
@@ -570,18 +499,7 @@ export default {
         //     }, 1000);
         // },
 
-        // stopAutoRefresh() {
-        //     if (this.refreshInterval) {
-        //         clearInterval(this.refreshInterval);
-        //         this.refreshInterval = null;
-        //     }
-        // },
 
-        openTerminal() {
-            if (this.terminalUrl) {
-                window.open(this.terminalUrl, "_blank");
-            }
-        },
 
         getStepHeader(stepNumber, label, icon) {
             return {
@@ -666,108 +584,7 @@ export default {
             }
         },
 
-        async startLab() {
-            this.isLoading = true;
-            this.error = null;
-            this.connectionAttempts = 0;
 
-            try {
-                const userId = this.userId;
-
-                console.log("User ID:", userId);
-
-                // Start container
-                const response = await this.$axios.post("/start-container", {
-                    user_id: userId || "guest_user",
-                });
-
-                if (response.data.status === "success") {
-                    this.container = response.data;
-
-                    // Get terminal URL
-                    const ttydResponse = await this.$axios.get(
-                        `/ttyd/${this.container.container_name}`,
-                    );
-
-                    this.terminalUrl = ttydResponse.data.url;
-                    console.log(
-                        "Terminal URL:",
-                        JSON.stringify(this.terminalUrl),
-                    );
-
-                    // Start the connection process
-                    this.connectTerminal();
-                }
-            } catch (error) {
-                console.error("Lab start failed:", error);
-                this.error = this.getErrorMessage(error);
-                this.isLoading = false;
-            }
-        },
-
-        async connectTerminal() {
-            this.isConnectingTerminal = true;
-            this.connectionAttempts++;
-
-            try {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, this.connectionRetryDelay),
-                );
-
-                this.$nextTick(() => {
-                    if (this.$refs.terminalIframe) {
-                        this.$refs.terminalIframe.src = this.terminalUrl;
-                    }
-                });
-            } catch (error) {
-                if (this.connectionAttempts < this.maxConnectionAttempts) {
-                    console.log(
-                        `Connection attempt ${this.connectionAttempts} failed, retrying...`,
-                    );
-                    setTimeout(() => {
-                        this.connectTerminal();
-                    }, this.connectionRetryDelay);
-                } else {
-                    console.error("Max connection attempts reached");
-                    this.error =
-                        "Failed to connect to terminal after multiple attempts";
-                    this.isConnectingTerminal = false;
-                    this.isLoading = false;
-                }
-            }
-        },
-
-        onIframeLoad() {
-            console.log("Iframe loaded successfully");
-            this.isConnectingTerminal = false;
-            this.isLoading = false;
-        },
-
-        onIframeError() {
-            console.error("Iframe failed to load");
-            if (this.connectionAttempts < this.maxConnectionAttempts) {
-                setTimeout(() => {
-                    this.connectTerminal();
-                }, this.connectionRetryDelay);
-            } else {
-                this.error = "Failed to load terminal after multiple attempts";
-                this.isConnectingTerminal = false;
-                this.isLoading = false;
-            }
-        },
-
-        getErrorMessage(error) {
-            if (error.response) {
-                return (
-                    error.response.data.message ||
-                    `Server error: ${error.response.status}`
-                );
-            } else if (error.request) {
-                return "Network error - is the backend running?";
-            } else {
-                return "Failed to start lab session";
-            }
-        },
     },
 };
 </script>
@@ -787,7 +604,7 @@ export default {
     background: var(--nlb-gradient-primary);
     border-radius: 16px;
     margin-bottom: 24px;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 32px var(--nlb-primary);
 }
 
 .header-content {
@@ -815,7 +632,7 @@ export default {
     margin: 0;
     font-size: 2.2rem;
     font-weight: 700;
-    background: linear-gradient(45deg, var(--nlb-text-light), #e0e7ff);
+    background: linear-gradient(45deg, var(--nlb-text-light), var(--nlb-primary-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -846,7 +663,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--nlb-bg-muted);
     padding: 12px 16px;
     border-radius: 12px;
     backdrop-filter: blur(10px);
@@ -854,11 +671,11 @@ export default {
 
 /* Progress Section */
 .progress-section {
-    background: white;
+    background: var(--nlb-bg-primary);
     border-radius: 16px;
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 
 .progress-header h3 {
@@ -926,7 +743,7 @@ export default {
     background: var(--nlb-bg-primary);
     border-radius: 16px;
     padding: 32px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 
 /* Step Content */
@@ -1028,6 +845,19 @@ export default {
     border-radius: 12px;
     padding: 24px;
     border: 1px solid var(--nlb-border-light);
+    transition: all 0.3s ease;
+}
+
+.config-card.primary-card {
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
+}
+
+.config-card.status-card {
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 
 .card-header {
@@ -1036,7 +866,7 @@ export default {
     gap: 12px;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--nlb-border-light);
 }
 
 .card-header h4 {
@@ -1051,81 +881,46 @@ export default {
     gap: 12px;
 }
 
-/* Session Info */
-.session-info-card {
-    background: linear-gradient(135deg, var(--nlb-success-light) 0%, var(--nlb-bg-muted) 100%);
-    border: 2px solid var(--nlb-success);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 32px;
-}
-
-.session-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.session-header h4 {
-    margin: 0;
-    color: var(--nlb-text-primary);
-    font-weight: 600;
-    flex: 1;
-}
-
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge.running {
-    background: var(--nlb-success-light);
-    color: var(--nlb-success-dark);
-}
-
-.session-details {
-    margin-bottom: 20px;
-}
-
-.detail-item {
-    margin-bottom: 8px;
-    color: var(--nlb-text-secondary);
-}
-
-.terminal-section {
-    margin-top: 20px;
-}
-
-.terminal-header {
+.status-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--nlb-border-light);
 }
 
-.terminal-header h5 {
-    margin: 0;
-    color: var(--nlb-text-primary);
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
     font-weight: 600;
+    color: var(--nlb-text-secondary);
 }
 
-.terminal-container {
-    border-radius: 8px;
-    overflow: hidden;
-    border: 2px solid var(--nlb-border-light);
+.status-value {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
 }
+
+.status-value.status-active {
+    color: var(--nlb-success-dark);
+}
+
+.status-value.status-inactive {
+    color: var(--nlb-error-dark);
+}
+
+
 
 /* Nodes Info */
 .nodes-info-card {
-    background: linear-gradient(135deg, var(--nlb-warning-light) 0%, var(--nlb-bg-muted) 100%);
-    border: 2px solid var(--nlb-warning);
+    background: var(--nlb-bg-primary);
+    border: 1px solid var(--nlb-border-light);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 32px;
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 
 .nodes-header {
@@ -1191,7 +986,7 @@ export default {
     background: var(--nlb-bg-primary);
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--nlb-border-medium);
     min-width: 200px;
 }
 
@@ -1238,7 +1033,7 @@ export default {
 .node-accordion {
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 
 .accordion-header {
@@ -1280,7 +1075,7 @@ export default {
     height: 500px;
     border: 2px solid var(--nlb-border-light);
     border-radius: 8px;
-    background: #1a202c;
+    background: var(--nlb-text-primary);
 }
 
 /* Buttons */
@@ -1296,7 +1091,7 @@ export default {
 
 .primary-button:hover:not(:disabled) {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+    box-shadow: 0 8px 25px var(--nlb-primary) !important;
 }
 
 .action-button {
@@ -1307,14 +1102,28 @@ export default {
     transition: all 0.3s ease;
 }
 
+.action-button.primary {
+    background: var(--nlb-bg-primary);
+    border: 1.5px solid var(--nlb-border-medium);
+    color: var(--nlb-text-primary);
+    box-shadow: 0 2px 8px var(--nlb-border-medium);
+}
+
+.action-button.primary:hover:not(:disabled) {
+    background: var(--nlb-bg-tertiary);
+    color: var(--nlb-text-primary);
+    box-shadow: 0 4px 16px var(--nlb-border-dark);
+}
+
 .action-button.secondary {
     background: var(--nlb-bg-muted);
-    border: 2px solid var(--nlb-border-light);
+    border: 1.5px solid var(--nlb-border-light);
     color: var(--nlb-text-secondary);
 }
 
 .action-button.secondary:hover {
-    background: var(--nlb-bg-tertiary);
+    background: var(--nlb-bg-primary);
+    color: var(--nlb-text-primary);
     border-color: var(--nlb-border-medium);
 }
 
@@ -1328,30 +1137,7 @@ export default {
     border-top: 1px solid var(--nlb-border-light);
 }
 
-/* Error Messages */
-.error-message {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--nlb-error-light);
-    border: 1px solid var(--nlb-error);
-    color: var(--nlb-error-dark);
-    padding: 12px;
-    border-radius: 8px;
-    margin-top: 12px;
-}
 
-.connecting-message {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--nlb-info-light);
-    border: 1px solid var(--nlb-info);
-    color: var(--nlb-info-dark);
-    padding: 12px;
-    border-radius: 8px;
-    margin-top: 12px;
-}
 
 /* Empty State */
 .empty-state {
