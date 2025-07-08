@@ -171,6 +171,12 @@
                                             @click="getOwnNodes"
                                             class="action-button secondary"
                                         />
+                                        <Button
+                                            :label="autoRefreshEnabled ? 'Auto-Refresh stoppen' : 'Auto-Refresh starten'"
+                                            :icon="autoRefreshEnabled ? 'pi pi-pause' : 'pi pi-play'"
+                                            @click="toggleAutoRefresh"
+                                            :class="['action-button', autoRefreshEnabled ? 'primary' : 'secondary']"
+                                        />
                                     </div>
                                 </div>
 
@@ -193,6 +199,12 @@
                                             <span class="status-label">Status:</span>
                                             <span class="status-value" :class="ownNodes.length > 0 ? 'status-active' : 'status-inactive'">
                                                 {{ ownNodes.length > 0 ? 'Aktiv' : 'Inaktiv' }}
+                                            </span>
+                                        </div>
+                                        <div class="status-item">
+                                            <span class="status-label">Auto-Refresh:</span>
+                                            <span class="status-value" :class="autoRefreshEnabled ? 'status-active' : 'status-inactive'">
+                                                {{ autoRefreshEnabled ? 'Aktiv' : 'Inaktiv' }}
                                             </span>
                                         </div>
                                     </div>
@@ -241,11 +253,14 @@
                                         @mouseenter="onNodeHover($event, node, index)"
                                         @mouseleave="onNodeOut"
                                     >
-                                        <div class="node-content">
-                                            <i class="pi pi-circle-fill node-indicator"></i>
-                                            <span class="node-name">{{
-                                            node.name || `Knoten ${index + 1}`
-                                        }}</span>
+                                        <!-- Node Header -->
+                                        <div class="node-header">
+                                            <div class="node-info">
+                                                <i class="pi pi-circle-fill node-indicator"></i>
+                                                <span class="node-name">{{
+                                                    getNodeDisplayName(node.name, index)
+                                                }}</span>
+                                            </div>
                                             <div class="node-actions">
                                                 <Button 
                                                     class="terminal-button"
@@ -269,6 +284,16 @@
                                             </div>
                                         </div>
                                         
+                                        <!-- Node Details -->
+                                        <div class="node-details">
+                                            <div class="node-status-info">
+                                                <span class="status-badge" :class="node.status === 'running' ? 'status-running' : 'status-stopped'">
+                                                    {{ node.status || 'Online' }}
+                                                </span>
+                                                <span class="port-info">Port: {{ node.port }}</span>
+                                            </div>
+                                        </div>
+                                        
                                         <!-- Node Connections -->
                                         <div class="node-connections">
                                             <span class="connections-label">Verbindungen:</span>
@@ -278,7 +303,7 @@
                                                     :key="connection.target"
                                                     class="connection-item"
                                                 >
-                                                    → {{ getNodeName(connection.target) }}
+                                                    {{ connection.direction === 'outgoing' ? '→' : '←' }} {{ getNodeName(connection.target) }}
                                                 </span>
                                             </div>
                                         </div>
@@ -292,7 +317,7 @@
                                     :style="{ left: tooltipPosition.x + 'px', top: tooltipPosition.y + 'px' }"
                                 >
                                     <div class="tooltip-header">
-                                        <h6>{{ hoveredNode.name || `Knoten ${hoveredNodeIndex + 1}` }}</h6>
+                                        <h6>{{ getNodeDisplayName(hoveredNode.name, hoveredNodeIndex) }}</h6>
                                         <Button 
                                             icon="pi pi-times" 
                                             @click="hoveredNode = null" 
@@ -340,13 +365,20 @@
 
                             <div class="step-actions">
                                 <Button
+                                    label="Neue Topologie erstellen"
+                                    icon="pi pi-plus"
+                                    severity="secondary"
+                                    @click="createNewTopology"
+                                    class="secondary-button"
+                                />
+                                <Button
                                     label="Zurück"
                                     icon="pi pi-arrow-left"
                                     severity="secondary"
                                     @click="previousStep"
                                 />
                                 <Button
-                                    label="Weiter zur Bereitstellung"
+                                    label="Weiter zu den Terminals"
                                     icon="pi pi-arrow-right"
                                     @click="nextStep"
                                     :disabled="ownNodes.length === 0"
@@ -377,7 +409,7 @@
                                         <i class="pi pi-server"></i>
                                         <div>
                                             <span class="stat-number">{{
-                                                terminal_urls.length
+                                                ownNodes.length
                                             }}</span>
                                             <span class="stat-label"
                                                 >Aktive Nodes</span
@@ -399,7 +431,7 @@
                             </div>
 
                             <div
-                                v-if="terminal_urls.length > 0"
+                                v-if="ownNodes.length > 0"
                                 class="terminals-section"
                             >
                                 <div class="terminals-header">
@@ -415,17 +447,17 @@
                                     class="node-accordion"
                                 >
                                     <AccordionTab
-                                        v-for="(node, index) in terminal_urls"
+                                        v-for="(node, index) in ownNodes"
                                         :key="index"
                                     >
                                         <template #header>
                                             <div class="accordion-header">
                                                 <i class="pi pi-desktop"></i>
                                                 <span
-                                                    >Knoten {{ index + 1 }}</span
+                                                    >{{ getNodeDisplayName(node.name, index) }}</span
                                                 >
                                                 <div class="node-status online">
-                                                    Online
+                                                    {{ node.status || 'Online' }}
                                                 </div>
                                             </div>
                                         </template>
@@ -433,14 +465,13 @@
                                         <div class="terminal-wrapper">
                                             <div class="terminal-info">
                                                 <p>
-                                                    Terminalzugang für Knoten
-                                                    {{ index + 1 }}
+                                                    Terminalzugang für {{ getNodeDisplayName(node.name, index) }}
                                                 </p>
                                             </div>
                                             <iframe
                                                 :src="node.url"
                                                 class="terminal-iframe"
-                                                :title="`Container Terminal ${index + 1}`"
+                                                :title="`Container Terminal ${getNodeDisplayName(node.name, index)}`"
                                                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                                                 @load="onIframeLoad"
                                                 @error="onIframeError"
@@ -481,30 +512,22 @@
 </template>
 
 <script>
-import { computed } from "vue";
-import { useStore } from "vuex";
-import { ref } from "vue";
 import Select from "primevue/select";
 import Button from "primevue/button";
 import Stepper from "primevue/stepper";
-import StepList from "primevue/steplist";
-import StepPanels from "primevue/steppanels";
 import StepItem from "primevue/stepitem";
 import Step from "primevue/step";
 import StepPanel from "primevue/steppanel";
-import Dropdown from "primevue/dropdown";
 import Accordion from "primevue/accordion";
-import AccordionPanel from "primevue/accordionpanel";
-import AccordionHeader from "primevue/accordionheader";
-import AccordionContent from "primevue/accordioncontent";
 import AccordionTab from "primevue/accordiontab";
-import { ButtonGroup } from "primevue";
 import { useToast } from "primevue/usetoast";
 import TopologyGraph from "./TopologyGraph.vue";
 
 export default {
-    created() {
+    async created() {
         this.$store.dispatch("initializeUser");
+        // Check if user already has an active topology
+        await this.checkExistingTopology();
     },
     setup() {
         const toast = useToast();
@@ -521,16 +544,10 @@ export default {
         Button,
         Stepper,
         Step,
-        StepList,
-        Dropdown,
-        StepPanels,
         StepItem,
         StepPanel,
         Accordion,
-        AccordionHeader,
         AccordionTab,
-        AccordionPanel,
-        AccordionContent,
         TopologyGraph,
     },
     data() {
@@ -547,28 +564,28 @@ export default {
             ],
             activeIndexes: [0, 2],
             ownNodes: [],
-            node_urls: [],
-            terminal_urls: [],
             graphNodes: [],
             graphConnections: [],
             hoveredNode: null,
             hoveredNodeIndex: null,
             tooltipPosition: { x: 0, y: 0 },
+            refreshInterval: null,
+            autoRefreshEnabled: false,
         };
     },
     watch: {
-        // activeStep(newVal) {
-        //     if (parseInt(newVal) === 2) {
-        //         this.getOwnNodes();
-        //         this.startAutoRefresh();
-        //     } else {
-        //         this.stopAutoRefresh();
-        //     }
-        // },
+        activeStep(newVal) {
+            if (parseInt(newVal) === 2) {
+                this.getOwnNodes();
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+        },
     },
-    // beforeUnmount() {
-    //     this.stopAutoRefresh();
-    // },
+    beforeUnmount() {
+        this.stopAutoRefresh();
+    },
     methods: {
         async nextStep() {
             console.log("selectedTopology", this.selectedTopology);
@@ -595,20 +612,66 @@ export default {
             this.selectedTopology = null;
             this.isLoading = false;
         },
-        // startAutoRefresh() {
-        //     this.refreshInterval = setInterval(() => {
-        //         this.getOwnNodes();
-        //     }, 1000);
-        // },
 
+        createNewTopology() {
+            // Clear existing topology and go back to step 1
+            this.ownNodes = [];
+            this.graphNodes = [];
+            this.graphConnections = [];
+            this.selectedTopology = null;
+            this.activeStep = "1";
+            this.stopAutoRefresh();
+            
+            this.toast.add({
+                severity: 'info',
+                summary: 'Neue Topologie',
+                detail: 'Sie können jetzt eine neue Topologie erstellen.',
+                life: 3000
+            });
+        },
 
+        startAutoRefresh() {
+            if (this.refreshInterval) {
+                this.stopAutoRefresh();
+            }
+            
+            this.autoRefreshEnabled = true;
+            this.refreshInterval = setInterval(async () => {
+                if (this.autoRefreshEnabled) {
+                    await this.getOwnNodes();
+                }
+            }, 3000); // Refresh every 3 seconds
+            
+            console.log('Auto-refresh started');
+        },
 
-        getStepHeader(stepNumber, label, icon) {
-            return {
-                value: label,
-                icon: icon,
-                number: stepNumber,
-            };
+        stopAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+            this.autoRefreshEnabled = false;
+            console.log('Auto-refresh stopped');
+        },
+
+        toggleAutoRefresh() {
+            if (this.autoRefreshEnabled) {
+                this.stopAutoRefresh();
+                this.toast.add({
+                    severity: 'info',
+                    summary: 'Auto-Refresh',
+                    detail: 'Automatische Aktualisierung gestoppt',
+                    life: 2000
+                });
+            } else {
+                this.startAutoRefresh();
+                this.toast.add({
+                    severity: 'success',
+                    summary: 'Auto-Refresh',
+                    detail: 'Automatische Aktualisierung gestartet',
+                    life: 2000
+                });
+            }
         },
 
         async createTopology() {
@@ -635,53 +698,100 @@ export default {
             }
         },
 
+        async checkExistingTopology() {
+            try {
+                const userId = this.userId;
+                
+                // Get terminal URLs which contain the container names
+                const terminal_urls_response = await this.$axios.get(
+                    "/ttyd/getOwnNodes",
+                    {
+                        params: { user_id: userId },
+                    },
+                );
+
+                if (terminal_urls_response.data.status === "success") {
+                    const terminals = terminal_urls_response.data.terminals;
+                    
+                    // Extract node information from terminal data
+                    this.ownNodes = terminals
+                        .filter(terminal => !terminal.container_name.includes('pcap-merger')) // Exclude pcap-merger
+                        .map((terminal, index) => ({
+                            name: terminal.container_name,
+                            id: terminal.container_name,
+                            ip: `172.16.0.${index + 1}`,
+                            port: terminal.port,
+                            status: terminal.status,
+                            url: terminal.url
+                        }));
+                    
+                    // If user has active nodes, skip to step 2 and set a default topology
+                    if (this.ownNodes.length > 0) {
+                        this.activeStep = "2";
+                        // Try to determine topology type based on node count and connections
+                        this.selectedTopology = this.determineTopologyType();
+                        this.updateGraphData();
+                        
+                        this.toast.add({
+                            severity: 'info',
+                            summary: 'Bestehende Topologie gefunden',
+                            detail: `Sie haben bereits ${this.ownNodes.length} aktive Knoten. Sie können direkt mit der Konfiguration fortfahren.`,
+                            life: 5000
+                        });
+                    }
+                    
+                    console.log("Terminal data:", JSON.stringify(terminal_urls_response.data));
+                    console.log("Processed nodes:", JSON.stringify(this.ownNodes));
+                } else {
+                    console.log(
+                        "error getting terminals :",
+                        JSON.stringify(terminal_urls_response),
+                    );
+                }
+            } catch (err) {
+                console.error("Error fetching terminals:", err);
+            }
+        },
+
         async getOwnNodes() {
             try {
                 this.isLoading = true;
                 const userId = this.userId;
 
-                const response = await this.$axios.get(
-                    `/user-topologies/${userId}`,
+                // Get terminal URLs which contain the container names
+                const terminal_urls_response = await this.$axios.get(
+                    "/ttyd/getOwnNodes",
+                    {
+                        params: { user_id: userId },
+                    },
                 );
 
-                if (response.data.status === "success") {
-                    this.ownNodes = response.data.nodes;
+                if (terminal_urls_response.data.status === "success") {
+                    const terminals = terminal_urls_response.data.terminals;
+                    
+                    // Extract node information from terminal data
+                    this.ownNodes = terminals
+                        .filter(terminal => !terminal.container_name.includes('pcap-merger')) // Exclude pcap-merger
+                        .map((terminal, index) => ({
+                            name: terminal.container_name,
+                            id: terminal.container_name,
+                            ip: `172.16.0.${index + 1}`,
+                            port: terminal.port,
+                            status: terminal.status,
+                            url: terminal.url
+                        }));
+                    
                     this.updateGraphData(); // Update graph data when nodes change
-                    console.log("data :", JSON.stringify(response));
-
-                    const terminal_urls_response = await this.$axios.get(
-                        "/ttyd/getOwnNodes",
-                        {
-                            params: { user_id: userId },
-                        },
-                    );
-
-                    if (terminal_urls_response.data.status === "success") {
-                        this.node_urls = response.data.nodes;
-                        console.log(
-                            "node_urls :",
-                            JSON.stringify(this.node_urls),
-                        );
-                        console.log(
-                            "terminal_urls_response :",
-                            JSON.stringify(terminal_urls_response),
-                        );
-                        this.terminal_urls =
-                            terminal_urls_response.data.terminals;
-                    } else {
-                        console.log(
-                            "error getting nodes :",
-                            JSON.stringify(terminal_urls_response),
-                        );
-                    }
+                    console.log("Terminal data:", JSON.stringify(terminal_urls_response.data));
+                    console.log("Processed nodes:", JSON.stringify(this.ownNodes));
                 } else {
                     console.log(
-                        "error getting nodes :",
-                        JSON.stringify(response),
+                        "error getting terminals :",
+                        JSON.stringify(terminal_urls_response),
                     );
                 }
             } catch (err) {
-                console.error("Error fetching nodes:", err);
+                console.error("Error fetching terminals:", err);
             } finally {
                 this.isLoading = false;
             }
@@ -705,6 +815,9 @@ export default {
         generateConnections() {
             const connections = [];
             const nodeCount = this.graphNodes.length;
+            
+            console.log('Generating connections for topology:', this.selectedTopology?.code);
+            console.log('Nodes:', this.graphNodes.map(n => ({ id: n.id, name: n.name })));
 
             if (this.selectedTopology?.code === 'ring') {
                 // Ring topology: each node connects to next and previous
@@ -761,13 +874,12 @@ export default {
                     });
                 }
             }
-
+            
+            console.log('Generated connections:', connections);
             return connections;
         },
 
         onNodeClick(node) {
-            console.log('Node clicked:', node);
-            // You can add additional functionality here
         },
 
         async onNodeHover(event, node, index) {
@@ -793,51 +905,76 @@ export default {
                 // Fetch real routing table from backend
                 const response = await this.$axios.get(`/node-routing/${node.name}`);
                 if (response.data.status === 'success') {
-                    return response.data.routes;
+                    const realRoutes = response.data.routes;
+                    
+                    // Check if we have meaningful routing data
+                    if (realRoutes && realRoutes.length > 0) {
+                        return realRoutes;
+                    } else {
+                        throw new Error('Keine Routing-Daten verfügbar');
+                    }
+                } else {
+                    throw new Error(response.data.message || 'Fehler beim Abrufen der Routing-Tabelle');
                 }
             } catch (error) {
                 console.error('Error fetching routing table:', error);
+                const nodeIndex = this.ownNodes.findIndex(n => n.name === node.name);
+                const nodeNumber = this.getNodeDisplayName(node.name, nodeIndex);
+                return [
+                    {
+                        destination: `Node ${nodeNumber} (Fehler)`,
+                        gateway: 'N/A',
+                        genmask: 'N/A',
+                        flags: 'N/A',
+                        iface: 'N/A'
+                    },
+                    {
+                        destination: 'Fehler beim Abrufen der Routing-Tabelle',
+                        gateway: error.message || 'Unbekannter Fehler',
+                        genmask: 'N/A',
+                        flags: 'N/A',
+                        iface: 'N/A'
+                    }
+                ];
             }
-            
-            // Fallback to mock data
-            return this.generateMockRoutingTable(node);
-        },
-
-        generateMockRoutingTable(node) {
-            return [
-                {
-                    destination: 'default',
-                    gateway: '172.16.0.1',
-                    genmask: '0.0.0.0',
-                    flags: 'UG',
-                    iface: 'eth0'
-                },
-                {
-                    destination: '172.16.0.0',
-                    gateway: '0.0.0.0',
-                    genmask: '255.255.0.0',
-                    flags: 'U',
-                    iface: 'eth0'
-                },
-                {
-                    destination: '192.168.1.0',
-                    gateway: '172.16.0.2',
-                    genmask: '255.255.255.0',
-                    flags: 'UG',
-                    iface: 'eth0'
-                }
-            ];
         },
 
         getNodeConnections(node, index) {
-            return this.graphConnections.filter(conn => 
-                conn.source === node.name || conn.target === node.name
-            );
+            console.log(`Getting connections for node: ${node.name} (index: ${index})`);
+            console.log('All graph connections:', this.graphConnections);
+            
+            const connections = this.graphConnections.filter(conn => {
+                // Check if this connection involves the current node
+                const isSource = conn.source === node.name;
+                const isTarget = conn.target === node.name;
+                
+                console.log(`Connection ${conn.source} -> ${conn.target}: isSource=${isSource}, isTarget=${isTarget}`);
+                
+                return isSource || isTarget;
+            });
+            
+            console.log('Filtered connections for node:', connections);
+            
+            // Transform connections to show proper direction
+            const result = connections.map(conn => {
+                const isSource = conn.source === node.name;
+                return {
+                    ...conn,
+                    direction: isSource ? 'outgoing' : 'incoming',
+                    target: isSource ? conn.target : conn.source
+                };
+            });
+            
+            console.log('Final connections for node:', result);
+            return result;
         },
 
         getNodeName(nodeId) {
             const node = this.ownNodes.find(n => n.name === nodeId);
-            return node ? node.name : nodeId;
+            if (node) {
+                return this.getNodeDisplayName(node.name, this.ownNodes.indexOf(node));
+            }
+            return nodeId;
         },
 
         async deleteNode(node) {
@@ -870,18 +1007,13 @@ export default {
         },
 
         openNodeTerminal(node) {
-            // Use the same logic as in the deployment section
-            // Find the node index in ownNodes and use the same index for terminal_urls
-            const nodeIndex = this.ownNodes.findIndex(n => n.name === node.name);
-            
-            if (nodeIndex >= 0 && this.terminal_urls[nodeIndex] && this.terminal_urls[nodeIndex].url) {
-                console.log(`Opening terminal for node: ${node.name}`, this.terminal_urls[nodeIndex]);
-                window.open(this.terminal_urls[nodeIndex].url, '_blank');
+            // The node object now contains the URL directly
+            if (node.url) {
+                console.log(`Opening terminal for node: ${node.name}`, node.url);
+                window.open(node.url, '_blank');
             } else {
                 console.error(`No terminal URL found for node: ${node.name}`);
-                console.log('Node index:', nodeIndex);
-                console.log('Available terminals:', this.terminal_urls);
-                console.log('Available nodes:', this.ownNodes);
+                console.log('Node data:', node);
                 
                 this.toast.add({
                     severity: 'error',
@@ -901,7 +1033,6 @@ export default {
                     this.ownNodes = [];
                     this.graphNodes = [];
                     this.graphConnections = [];
-                    this.terminal_urls = [];
                     
                     this.toast.add({
                         severity: 'success',
@@ -919,6 +1050,67 @@ export default {
                     life: 3000
                 });
             }
+        },
+
+        onIframeLoad(event) {
+            console.log('Iframe loaded successfully:', event);
+        },
+
+        onIframeError(event) {
+            console.error('Iframe failed to load:', event);
+            this.toast.add({
+                severity: 'error',
+                summary: 'Terminal Fehler',
+                detail: 'Terminal konnte nicht geladen werden',
+                life: 3000
+            });
+        },
+
+        determineTopologyType() {
+            const nodeCount = this.ownNodes.length;
+            
+            console.log('Determining topology type for', nodeCount, 'nodes');
+            
+            // Try to determine topology based on node count
+            let topology;
+            if (nodeCount === 2) {
+                topology = { name: "Mini-Ring", code: "mini_ring" };
+            } else if (nodeCount === 3) {
+                topology = { name: "Ring", code: "ring" };
+            } else if (nodeCount === 4) {
+                topology = { name: "Mesh", code: "mesh" };
+            } else if (nodeCount === 5) {
+                topology = { name: "Star", code: "star" };
+            } else if (nodeCount >= 6) {
+                topology = { name: "Tree", code: "tree" };
+            } else {
+                // Default fallback
+                topology = { name: "Star", code: "star" };
+            }
+            
+            console.log('Determined topology:', topology);
+            return topology;
+        },
+
+        getNodeDisplayName(containerName, index) {
+            if (!containerName) {
+                return `${index + 1}`;
+            }
+            
+            // Extract the number from container name like "prototype-guest_18dbmi_node-guest_18dbmi_101"
+            const match = containerName.match(/_(\d+)$/);
+            if (match) {
+                return match[1];
+            }
+            
+            // Fallback: try to find any number in the name
+            const numberMatch = containerName.match(/(\d+)/);
+            if (numberMatch) {
+                return numberMatch[1];
+            }
+            
+            // Final fallback
+            return `${index + 1}`;
         },
 
 
@@ -1333,27 +1525,78 @@ export default {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.node-content {
+.node-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.node-info {
+    display: flex;
+    align-items: center;
     gap: 8px;
+    flex: 1;
+    min-width: 0; /* Allow text to truncate */
 }
 
 .node-name {
-    flex: 1;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .node-actions {
     display: flex;
     gap: 4px;
-    opacity: 0.8;
+    opacity: 0.7;
     transition: opacity 0.2s ease;
+    flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 .node-item:hover .node-actions {
     opacity: 1;
+}
+
+.node-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.node-status-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-running {
+    background: var(--nlb-success-light);
+    color: var(--nlb-success-dark);
+}
+
+.status-badge.status-stopped {
+    background: var(--nlb-error-light);
+    color: var(--nlb-error-dark);
+}
+
+.port-info {
+    font-size: 0.8rem;
+    color: var(--nlb-text-secondary);
+    font-weight: 500;
 }
 
 .node-actions .p-button {
@@ -1363,24 +1606,33 @@ export default {
 }
 
 .node-actions .p-button.p-button-text {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: var(--nlb-bg-secondary);
+    border: 1px solid var(--nlb-border-light);
+    color: var(--nlb-text-secondary);
+    transition: all 0.2s ease;
 }
 
 .node-actions .p-button.p-button-text:hover {
-    background: rgba(0, 0, 0, 0.1);
-    border-color: rgba(0, 0, 0, 0.2);
+    background: var(--nlb-primary);
+    border-color: var(--nlb-primary);
+    color: var(--nlb-text-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .node-actions .p-button.p-button-danger {
-    background: rgba(244, 67, 54, 0.1);
-    border: 1px solid rgba(244, 67, 54, 0.3);
-    color: #d32f2f;
+    background: var(--nlb-error-light);
+    border: 1px solid var(--nlb-error);
+    color: var(--nlb-error-dark);
+    transition: all 0.2s ease;
 }
 
 .node-actions .p-button.p-button-danger:hover {
-    background: rgba(244, 67, 54, 0.2);
-    border-color: rgba(244, 67, 54, 0.5);
+    background: var(--nlb-error);
+    border-color: var(--nlb-error-dark);
+    color: var(--nlb-text-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
 }
 
 .terminal-button {
@@ -1388,38 +1640,41 @@ export default {
     align-items: center;
     justify-content: center;
     gap: 2px;
+    position: relative;
 }
 
 .terminal-button .arrow-icon {
     font-size: 0.6rem;
     opacity: 0.8;
     margin-left: -2px;
+    transition: all 0.2s ease;
 }
 
 .terminal-button:hover .arrow-icon {
     opacity: 1;
     transform: translate(1px, -1px);
-    transition: all 0.2s ease;
 }
 
 .node-connections {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-top: 8px;
+    padding-top: 12px;
     border-top: 1px solid var(--nlb-border-light);
+    margin-top: 8px;
 }
 
 .connections-label {
     font-size: 0.8rem;
     color: var(--nlb-text-secondary);
     font-weight: 600;
+    margin-bottom: 4px;
 }
 
 .connection-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .connection-item {
@@ -1477,8 +1732,6 @@ export default {
 }
 
 .table-container {
-    max-height: 200px;
-    overflow-y: auto;
     border: 1px solid var(--nlb-border-light);
     border-radius: 4px;
 }
@@ -1631,6 +1884,23 @@ export default {
 .primary-button:hover:not(:disabled) {
     transform: translateY(-2px) !important;
     box-shadow: 0 8px 25px var(--nlb-primary) !important;
+}
+
+.secondary-button {
+    background: var(--nlb-bg-secondary) !important;
+    border: 1.5px solid var(--nlb-border-medium) !important;
+    color: var(--nlb-text-primary) !important;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.secondary-button:hover:not(:disabled) {
+    background: var(--nlb-bg-tertiary) !important;
+    border-color: var(--nlb-border-dark) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px var(--nlb-border-medium) !important;
 }
 
 .action-button {

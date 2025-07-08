@@ -26,7 +26,7 @@
                         :style="getNodePosition(index)"
                     >
                         <div class="node-circle">
-                            <span class="node-number">{{ index + 1 }}</span>
+                            <span class="node-number">{{ getNodeDisplayName(node.name, index) }}</span>
                         </div>
                     </div>
                 </div>
@@ -70,22 +70,88 @@ export default {
         return {
             nodeRadius: 30,
             containerWidth: 600,
-            containerHeight: 400
+            containerHeight: 400,
+            visibilityObserver: null
         };
     },
     mounted() {
         this.updateContainerSize();
         window.addEventListener('resize', this.updateContainerSize);
+        
+        // Listen for visibility change events (tab switching)
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        
+        // Use MutationObserver to detect when the component becomes visible
+        this.observeVisibility();
     },
     beforeUnmount() {
         window.removeEventListener('resize', this.updateContainerSize);
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        
+        if (this.visibilityObserver) {
+            this.visibilityObserver.disconnect();
+        }
+    },
+    watch: {
+        nodes: {
+            handler() {
+                // Update container size when nodes change
+                this.$nextTick(() => {
+                    this.updateContainerSize();
+                });
+            },
+            deep: true
+        }
     },
     methods: {
         updateContainerSize() {
             const container = this.$refs.graphContainer;
             if (container) {
-                this.containerWidth = container.clientWidth;
-                this.containerHeight = container.clientHeight;
+                // Use nextTick to ensure DOM is fully rendered
+                this.$nextTick(() => {
+                    const newWidth = container.clientWidth;
+                    const newHeight = container.clientHeight;
+                    
+                    // Only update if dimensions actually changed
+                    if (newWidth !== this.containerWidth || newHeight !== this.containerHeight) {
+                        this.containerWidth = newWidth;
+                        this.containerHeight = newHeight;
+                    }
+                });
+            }
+        },
+        
+        handleVisibilityChange() {
+            // When tab becomes visible again, update container size
+            if (!document.hidden) {
+                setTimeout(() => {
+                    this.updateContainerSize();
+                }, 100); // Small delay to ensure DOM is ready
+            }
+        },
+        
+        observeVisibility() {
+            // Use Intersection Observer to detect when component becomes visible
+            if ('IntersectionObserver' in window) {
+                this.visibilityObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            // Component is visible, update size
+                            setTimeout(() => {
+                                this.updateContainerSize();
+                            }, 50);
+                        }
+                    });
+                }, {
+                    threshold: 0.1
+                });
+                
+                // Use nextTick to ensure DOM is ready
+                this.$nextTick(() => {
+                    if (this.$refs.graphContainer) {
+                        this.visibilityObserver.observe(this.$refs.graphContainer);
+                    }
+                });
             }
         },
         
@@ -180,6 +246,27 @@ export default {
         },
         clearGraph() {
             this.$emit('clear-all');
+        },
+
+        getNodeDisplayName(containerName, index) {
+            if (!containerName) {
+                return `${index + 1}`;
+            }
+            
+            // Extract the number from container name like "prototype-guest_18dbmi_node-guest_18dbmi_101"
+            const match = containerName.match(/_(\d+)$/);
+            if (match) {
+                return match[1];
+            }
+            
+            // Fallback: try to find any number in the name
+            const numberMatch = containerName.match(/(\d+)/);
+            if (numberMatch) {
+                return numberMatch[1];
+            }
+            
+            // Final fallback
+            return `${index + 1}`;
         }
     }
 };
