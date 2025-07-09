@@ -508,6 +508,8 @@
                 </StepItem>
             </Stepper>
         </div>
+        
+        <ConfirmDialog />
     </div>
 </template>
 
@@ -520,18 +522,20 @@ import Step from "primevue/step";
 import StepPanel from "primevue/steppanel";
 import Accordion from "primevue/accordion";
 import AccordionTab from "primevue/accordiontab";
+import ConfirmDialog from "primevue/confirmdialog";
 import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 import TopologyGraph from "./TopologyGraph.vue";
 
 export default {
     async created() {
         this.$store.dispatch("initializeUser");
-        // Check if user already has an active topology
         await this.checkExistingTopology();
     },
     setup() {
         const toast = useToast();
-        return { toast };
+        const confirm = useConfirm();
+        return { toast, confirm };
     },
     computed: {
         userId() {
@@ -548,6 +552,7 @@ export default {
         StepPanel,
         Accordion,
         AccordionTab,
+        ConfirmDialog,
         TopologyGraph,
     },
     data() {
@@ -593,7 +598,6 @@ export default {
             if (currentStep < 3) {
                 this.activeStep = String(currentStep + 1);
 
-                // Automatically fetch nodes when entering step 2
                 if (currentStep + 1 === 2) {
                     await this.getOwnNodes();
                 }
@@ -608,26 +612,133 @@ export default {
         },
 
         resetStepper() {
-            this.activeStep = "1";
-            this.selectedTopology = null;
-            this.isLoading = false;
+            // Check if user has existing nodes
+            if (this.ownNodes.length > 0) {
+                this.confirm.require({
+                    message: 'Möchten Sie wirklich alle Ihre bestehenden Knoten löschen und den Prozess neu starten?',
+                    header: 'Prozess Neustarten',
+                    icon: 'pi pi-exclamation-triangle',
+                    acceptClass: 'p-button-danger',
+                    acceptLabel: 'Ja',
+                    rejectLabel: 'Nein',
+                    accept: () => {
+                        this.clearTopologyAndRestart();
+                    },
+                    reject: () => {
+                        this.toast.add({
+                            severity: 'info',
+                            summary: 'Abgebrochen',
+                            detail: 'Prozess wurde nicht neu gestartet.',
+                            life: 3000
+                        });
+                    }
+                });
+            } else {
+                this.clearTopologyAndRestart();
+            }
+        },
+
+        async clearTopologyAndRestart() {
+            try {
+                const userId = this.userId;
+                const response = await this.$axios.delete(`/clear-topology/${userId}`);
+                
+                if (response.data.status === 'success') {
+                    this.activeStep = "1";
+                    this.selectedTopology = null;
+                    this.isLoading = false;
+                    this.ownNodes = [];
+                    this.graphNodes = [];
+                    this.graphConnections = [];
+                    this.stopAutoRefresh();
+                    
+                    this.toast.add({
+                        severity: 'success',
+                        summary: 'Prozess Neustart',
+                        detail: 'Alle Knoten wurden erfolgreich entfernt und der Prozess neu gestartet.',
+                        life: 3000
+                    });
+                } else {
+                    this.toast.add({
+                        severity: 'error',
+                        summary: 'Fehler',
+                        detail: 'Knoten konnten nicht gelöscht werden.',
+                        life: 3000
+                    });
+                }
+            } catch (error) {
+                console.error('Error clearing topology:', error);
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'Fehler',
+                    detail: 'Topologie konnte nicht gelöscht werden.',
+                    life: 3000
+                });
+            }
         },
 
         createNewTopology() {
-            // Clear existing topology and go back to step 1
-            this.ownNodes = [];
-            this.graphNodes = [];
-            this.graphConnections = [];
-            this.selectedTopology = null;
-            this.activeStep = "1";
-            this.stopAutoRefresh();
-            
-            this.toast.add({
-                severity: 'info',
-                summary: 'Neue Topologie',
-                detail: 'Sie können jetzt eine neue Topologie erstellen.',
-                life: 3000
-            });
+            if (this.ownNodes.length > 0) {
+                this.confirm.require({
+                    message: 'Möchten Sie wirklich alle Ihre bestehenden Knoten löschen und eine neue Topologie erstellen?',
+                    header: 'Neue Topologie erstellen',
+                    icon: 'pi pi-exclamation-triangle',
+                    acceptClass: 'p-button-danger',
+                    acceptLabel: 'Ja',
+                    rejectLabel: 'Nein',
+                    accept: () => {
+                        this.clearTopologyAndReset();
+                    },
+                    reject: () => {
+                        this.toast.add({
+                            severity: 'info',
+                            summary: 'Abgebrochen',
+                            detail: 'Neue Topologie wurde nicht erstellt.',
+                            life: 3000
+                        });
+                    }
+                });
+            } else {
+                this.clearTopologyAndReset();
+            }
+        },
+
+        async clearTopologyAndReset() {
+            try {
+                const userId = this.userId;
+                const response = await this.$axios.delete(`/clear-topology/${userId}`);
+                
+                if (response.data.status === 'success') {
+                    this.ownNodes = [];
+                    this.graphNodes = [];
+                    this.graphConnections = [];
+                    this.selectedTopology = null;
+                    this.activeStep = "1";
+                    this.stopAutoRefresh();
+                    
+                    this.toast.add({
+                        severity: 'success',
+                        summary: 'Topologie gelöscht',
+                        detail: 'Alle Knoten wurden erfolgreich entfernt. Sie können jetzt eine neue Topologie erstellen.',
+                        life: 3000
+                    });
+                } else {
+                    this.toast.add({
+                        severity: 'error',
+                        summary: 'Fehler',
+                        detail: 'Knoten konnten nicht gelöscht werden.',
+                        life: 3000
+                    });
+                }
+            } catch (error) {
+                console.error('Error clearing topology:', error);
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'Fehler',
+                    detail: 'Topologie konnte nicht gelöscht werden.',
+                    life: 3000
+                });
+            }
         },
 
         startAutoRefresh() {
@@ -640,7 +751,7 @@ export default {
                 if (this.autoRefreshEnabled) {
                     await this.getOwnNodes();
                 }
-            }, 3000); // every 3 seconds
+            }, 3000);
             
             console.log('Auto-refresh started');
         },
@@ -689,7 +800,7 @@ export default {
                 if (response.data.status === "success") {
                     // await checkStatus();
                 } else {
-                    console.log(
+                    console.error(
                         response.data.message || "Failed to create topology",
                     );
                 }
@@ -702,7 +813,6 @@ export default {
             try {
                 const userId = this.userId;
                 
-                // Get terminal URLs which contain the container names
                 const terminal_urls_response = await this.$axios.get(
                     "/ttyd/getOwnNodes",
                     {
@@ -713,7 +823,6 @@ export default {
                 if (terminal_urls_response.data.status === "success") {
                     const terminals = terminal_urls_response.data.terminals;
                     
-                    // Extract node information from terminal data
                     this.ownNodes = terminals
                         .filter(terminal => !terminal.container_name.includes('pcap-merger')) // Exclude pcap-merger
                         .map((terminal, index) => ({
@@ -725,10 +834,8 @@ export default {
                             url: terminal.url
                         }));
                     
-                    // If user has active nodes, skip to step 2 and set a default topology
                     if (this.ownNodes.length > 0) {
                         this.activeStep = "2";
-                        // Try to determine topology type based on node count and connections
                         this.selectedTopology = this.determineTopologyType();
                         this.updateGraphData();
                         
@@ -758,7 +865,6 @@ export default {
                 this.isLoading = true;
                 const userId = this.userId;
 
-                // Get terminal URLs which contain the container names
                 const terminal_urls_response = await this.$axios.get(
                     "/ttyd/getOwnNodes",
                     {
@@ -769,9 +875,8 @@ export default {
                 if (terminal_urls_response.data.status === "success") {
                     const terminals = terminal_urls_response.data.terminals;
                     
-                    // Extract node information from terminal data
                     this.ownNodes = terminals
-                        .filter(terminal => !terminal.container_name.includes('pcap-merger')) // Exclude pcap-merger
+                        .filter(terminal => !terminal.container_name.includes('pcap-merger'))
                         .map((terminal, index) => ({
                             name: terminal.container_name,
                             id: terminal.container_name,
@@ -781,7 +886,7 @@ export default {
                             url: terminal.url
                         }));
                     
-                    this.updateGraphData(); // Update graph data when nodes change
+                    this.updateGraphData();
                     console.log("Terminal data:", JSON.stringify(terminal_urls_response.data));
                     console.log("Processed nodes:", JSON.stringify(this.ownNodes));
                 } else {
@@ -797,9 +902,7 @@ export default {
             }
         },
 
-        // Graph-related methods
         updateGraphData() {
-            // Convert ownNodes to graph format
             this.graphNodes = this.ownNodes.map((node, index) => ({
                 id: node.name || `node-${index}`,
                 name: node.name || `Knoten ${index + 1}`,
@@ -808,7 +911,6 @@ export default {
                 type: 'router'
             }));
 
-            // Generate connections based on topology type
             this.graphConnections = this.generateConnections();
         },
 
@@ -820,7 +922,6 @@ export default {
             console.log('Nodes:', this.graphNodes.map(n => ({ id: n.id, name: n.name })));
 
             if (this.selectedTopology?.code === 'ring') {
-                // Ring topology: each node connects to next and previous
                 for (let i = 0; i < nodeCount; i++) {
                     const next = (i + 1) % nodeCount;
                     connections.push({
@@ -829,8 +930,7 @@ export default {
                         type: 'ethernet'
                     });
                 }
-            } else if (this.selectedTopology?.code === 'mesh') {
-                // Mesh topology: each node connects to all others
+            } else if (this.selectedTopology?.code === 'mesh') {    
                 for (let i = 0; i < nodeCount; i++) {
                     for (let j = i + 1; j < nodeCount; j++) {
                         connections.push({
@@ -841,7 +941,6 @@ export default {
                     }
                 }
             } else if (this.selectedTopology?.code === 'star') {
-                // Star topology: central node connects to all others
                 if (nodeCount > 1) {
                     const centralNode = this.graphNodes[0];
                     for (let i = 1; i < nodeCount; i++) {
@@ -853,7 +952,6 @@ export default {
                     }
                 }
             } else if (this.selectedTopology?.code === 'tree') {
-                // Tree topology: hierarchical structure
                 for (let i = 1; i < nodeCount; i++) {
                     const parentIndex = Math.floor((i - 1) / 2);
                     if (parentIndex < nodeCount) {
@@ -865,7 +963,6 @@ export default {
                     }
                 }
             } else {
-                // Default: mini-ring or custom
                 for (let i = 0; i < nodeCount - 1; i++) {
                     connections.push({
                         source: this.graphNodes[i].id,
@@ -902,12 +999,10 @@ export default {
 
         async fetchRoutingTable(node) {
             try {
-                // Fetch real routing table from backend
                 const response = await this.$axios.get(`/node-routing/${node.name}`);
                 if (response.data.status === 'success') {
                     const realRoutes = response.data.routes;
                     
-                    // Check if we have meaningful routing data
                     if (realRoutes && realRoutes.length > 0) {
                         return realRoutes;
                     } else {
@@ -944,7 +1039,6 @@ export default {
             console.log('All graph connections:', this.graphConnections);
             
             const connections = this.graphConnections.filter(conn => {
-                // Check if this connection involves the current node
                 const isSource = conn.source === node.name;
                 const isTarget = conn.target === node.name;
                 
@@ -955,7 +1049,6 @@ export default {
             
             console.log('Filtered connections for node:', connections);
             
-            // Transform connections to show proper direction
             const result = connections.map(conn => {
                 const isSource = conn.source === node.name;
                 return {
@@ -983,11 +1076,9 @@ export default {
                 const response = await this.$axios.delete(`/delete-node/${userId}/${node.id}`);
                 
                 if (response.data.status === 'success') {
-                    // Remove node from local data
                     this.ownNodes = this.ownNodes.filter(n => n.name !== node.name);
                     this.updateGraphData();
                     
-                    // Show success message
                     this.toast.add({
                         severity: 'success',
                         summary: 'Knoten gelöscht',
@@ -1007,7 +1098,6 @@ export default {
         },
 
         openNodeTerminal(node) {
-            // The node object now contains the URL directly
             if (node.url) {
                 console.log(`Opening terminal for node: ${node.name}`, node.url);
                 window.open(node.url, '_blank');
@@ -1025,31 +1115,49 @@ export default {
         },
 
         async clearAllNodes() {
-            try {
-                const userId = this.userId;
-                const response = await this.$axios.delete(`/clear-topology/${userId}`);
-                
-                if (response.data.status === 'success') {
-                    this.ownNodes = [];
-                    this.graphNodes = [];
-                    this.graphConnections = [];
-                    
+            this.confirm.require({
+                message: 'Möchten Sie wirklich alle Ihre bestehenden Knoten löschen?',
+                header: 'Alle Knoten löschen',
+                icon: 'pi pi-exclamation-triangle',
+                acceptClass: 'p-button-danger',
+                acceptLabel: 'Ja',
+                rejectLabel: 'Nein',
+                accept: async () => {
+                    try {
+                        const userId = this.userId;
+                        const response = await this.$axios.delete(`/clear-topology/${userId}`);
+                        
+                        if (response.data.status === 'success') {
+                            this.ownNodes = [];
+                            this.graphNodes = [];
+                            this.graphConnections = [];
+                            
+                            this.toast.add({
+                                severity: 'success',
+                                summary: 'Topologie gelöscht',
+                                detail: 'Alle Knoten wurden erfolgreich entfernt',
+                                life: 3000
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error clearing topology:', error);
+                        this.toast.add({
+                            severity: 'error',
+                            summary: 'Fehler',
+                            detail: 'Topologie konnte nicht gelöscht werden',
+                            life: 3000
+                        });
+                    }
+                },
+                reject: () => {
                     this.toast.add({
-                        severity: 'success',
-                        summary: 'Topologie gelöscht',
-                        detail: 'Alle Knoten wurden erfolgreich entfernt',
+                        severity: 'info',
+                        summary: 'Abgebrochen',
+                        detail: 'Knoten wurden nicht gelöscht.',
                         life: 3000
                     });
                 }
-            } catch (error) {
-                console.error('Error clearing topology:', error);
-                this.toast.add({
-                    severity: 'error',
-                    summary: 'Fehler',
-                    detail: 'Topologie konnte nicht gelöscht werden',
-                    life: 3000
-                });
-            }
+            });
         },
 
         onIframeLoad(event) {
@@ -1071,7 +1179,6 @@ export default {
             
             console.log('Determining topology type for', nodeCount, 'nodes');
             
-            // Try to determine topology based on node count
             let topology;
             if (nodeCount === 2) {
                 topology = { name: "Mini-Ring", code: "mini_ring" };
@@ -1096,19 +1203,16 @@ export default {
                 return `${index + 1}`;
             }
             
-            // Extract the number from container name like "prototype-guest_18dbmi_node-guest_18dbmi_101"
             const match = containerName.match(/_(\d+)$/);
             if (match) {
                 return match[1];
             }
             
-            // Fallback: try to find any number in the name
             const numberMatch = containerName.match(/(\d+)/);
             if (numberMatch) {
                 return numberMatch[1];
             }
             
-            // Final fallback
             return `${index + 1}`;
         },
 

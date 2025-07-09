@@ -15,6 +15,7 @@ import router from "./router";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import ToastService from "primevue/toastservice";
+import ConfirmationService from "primevue/confirmationservice";
 
 // Create Axios instance with base configuration
 const apiClient = axios.create({
@@ -29,6 +30,7 @@ const apiClient = axios.create({
 const app = createApp(App);
 app.use(router);
 app.use(ToastService);
+app.use(ConfirmationService);
 app.use(store);
 
 // Add Axios to Vue prototype and provide for Composition API
