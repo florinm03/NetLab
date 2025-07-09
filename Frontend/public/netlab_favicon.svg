@@ -1,0 +1,46 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Simple gradient for background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    
+    <!-- Node gradient -->
+    <radialGradient id="nodeGrad" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#a8edea"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="url(#bgGrad)"/>
+  
+  <!-- Simplified network (4 nodes in diamond pattern) -->
+  <g>
+    <!-- Connection lines -->
+    <line x1="16" y1="6" x2="26" y2="16" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    <line x1="26" y1="16" x2="16" y2="26" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    <line x1="16" y1="26" x2="6" y2="16" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    <line x1="6" y1="16" x2="16" y2="6" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Network nodes -->
+    <circle cx="16" cy="6" r="3" fill="url(#nodeGrad)" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="26" cy="16" r="3" fill="url(#nodeGrad)" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="16" cy="26" r="3" fill="url(#nodeGrad)" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="6" cy="16" r="3" fill="url(#nodeGrad)" stroke="#ffffff" stroke-width="1"/>
+    
+    <!-- Center hub -->
+    <circle cx="16" cy="16" r="2" fill="#ffffff" opacity="0.9"/>
+  </g>
+  
+  <!-- Simple lab indicator (small flask) -->
+  <g transform="translate(22, 22)">
+    <path d="M 2,1 L 4,1 L 4,2 L 6,5 L 0,5 Z" 
+          fill="none" 
+          stroke="#ffffff" 
+          stroke-width="1" 
+          opacity="0.8"/>
+    <rect x="1" y="4" width="4" height="1" fill="rgba(168,237,234,0.8)"/>
+  </g>
+</svg>
