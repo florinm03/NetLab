@@ -57,6 +57,50 @@ def init_ttyd_session():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@terminal_bp.route('/cleanup', methods=['POST'])
+def cleanup_sessions():
+    """Clean up ttyd sessions for a specific user or all sessions"""
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        
+        if user_id:
+            terminal_service.cleanup_all_sessions(user_id)
+            return jsonify({
+                'status': 'success',
+                'message': f'Cleaned up ttyd sessions for user {user_id}'
+            }), 200
+        else:
+            terminal_service.cleanup_all_sessions()
+            return jsonify({
+                'status': 'success',
+                'message': 'Cleaned up all ttyd sessions'
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Failed to cleanup sessions: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@terminal_bp.route('/status', methods=['GET'])
+def get_session_status():
+    """Get status of all ttyd sessions"""
+    try:
+        status_info = {
+            'active_sessions': len(terminal_service.active_sessions),
+            'container_ports': len(terminal_service.container_ports),
+            'ttyd_processes': len(terminal_service.ttyd_processes),
+            'containers': list(terminal_service.container_ports.keys()),
+            'processes': list(terminal_service.ttyd_processes.keys())
+        }
+        return jsonify({
+            'status': 'success',
+            'data': status_info
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Failed to get session status: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 def make_session_response(result, session_id):
     """Create a session response with proper headers and cookies"""
     response = jsonify(result)

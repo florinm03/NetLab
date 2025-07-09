@@ -640,7 +640,7 @@ export default {
                 if (this.autoRefreshEnabled) {
                     await this.getOwnNodes();
                 }
-            }, 3000); // Refresh every 3 seconds
+            }, 3000); // every 3 seconds
             
             console.log('Auto-refresh started');
         },
@@ -1084,7 +1084,6 @@ export default {
             } else if (nodeCount >= 6) {
                 topology = { name: "Tree", code: "tree" };
             } else {
-                // Default fallback
                 topology = { name: "Star", code: "star" };
             }
             

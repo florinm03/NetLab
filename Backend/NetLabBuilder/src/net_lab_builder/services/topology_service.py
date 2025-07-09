@@ -3,6 +3,7 @@ import subprocess
 import os
 import docker
 from collections import defaultdict
+from .terminal_service import TerminalService
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,7 @@ class TopologyService:
     def __init__(self):
         self.client = docker.from_env()
         self.active_sessions = defaultdict(dict)
+        self.terminal_service = TerminalService()
 
     def get_user_topologies(self, user_id):
         """Get all topologies for a specific user"""
@@ -183,6 +185,9 @@ class TopologyService:
             
             container = containers[0]
             
+            # Clean up ttyd session for this container
+            self.terminal_service._cleanup_container_session(container.name)
+            
             # Stop and remove the container
             container.stop()
             container.remove()
@@ -214,6 +219,9 @@ class TopologyService:
                     deleted_count += 1
                 except Exception as e:
                     logger.error(f"Failed to delete container {container.name}: {str(e)}")
+            
+            # Clean up ttyd sessions for this user
+            self.terminal_service.cleanup_all_sessions(user_id)
             
             logger.info(f"Cleared topology for user {user_id}, deleted {deleted_count} containers")
             
