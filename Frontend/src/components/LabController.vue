@@ -209,6 +209,31 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- PCAP Download Card -->
+                                <div class="config-card">
+                                    <div class="card-header">
+                                        <i class="pi pi-download"></i>
+                                        <h4>PCAP Download</h4>
+                                    </div>
+                                    <div class="card-content">
+                                        <p class="pcap-description">
+                                            Laden Sie die gemergte PCAP-Datei herunter, die alle Netzwerk-Traffic-Daten enthält.
+                                        </p>
+                                        <Button
+                                            label="PCAP herunterladen"
+                                            icon="pi pi-download"
+                                            @click="downloadPcap"
+                                            :loading="pcapDownloading"
+                                            :disabled="ownNodes.length === 0"
+                                            class="action-button primary"
+                                        />
+                                        <div v-if="pcapDownloadStatus" class="pcap-status">
+                                            <i :class="pcapDownloadStatus.type === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
+                                            <span>{{ pcapDownloadStatus.message }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Topology Graph -->
@@ -441,6 +466,30 @@
                                     </p>
                                 </div>
 
+                                <!-- PCAP Download Section -->
+                                <div class="config-card">
+                                    <div class="card-header">
+                                        <i class="pi pi-download"></i>
+                                        <h4>PCAP-Datei herunterladen</h4>
+                                    </div>
+                                    <div class="card-content">
+                                        <p class="pcap-description">
+                                            Laden Sie die gemergte PCAP-Datei herunter, die alle Netzwerk-Traffic-Daten Ihrer Topologie enthält.
+                                        </p>
+                                        <Button
+                                            label="PCAP herunterladen"
+                                            icon="pi pi-download"
+                                            @click="downloadPcap"
+                                            :loading="pcapDownloading"
+                                            class="action-button primary"
+                                        />
+                                        <div v-if="pcapDownloadStatus" class="pcap-status">
+                                            <i :class="pcapDownloadStatus.type === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
+                                            <span>{{" " + pcapDownloadStatus.message }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <Accordion
                                     :multiple="true"
                                     v-model:activeIndex="activeIndexes"
@@ -576,6 +625,8 @@ export default {
             tooltipPosition: { x: 0, y: 0 },
             refreshInterval: null,
             autoRefreshEnabled: false,
+            pcapDownloading: false,
+            pcapDownloadStatus: null,
         };
     },
     watch: {
@@ -1214,6 +1265,72 @@ export default {
             }
             
             return `${index + 1}`;
+        },
+
+        async downloadPcap() {
+            try {
+                this.pcapDownloading = true;
+                this.pcapDownloadStatus = null;
+                
+                const userId = this.userId;
+                console.log("--------------------------------");
+                console.log('Downloading PCAP for user:', userId);
+                const response = await this.$axios.get(`/download-pcap/${userId}`, {
+                    responseType: 'blob'
+                });
+                
+                // Create a download link
+                const blob = new Blob([response.data], { 
+                    type: 'application/vnd.tcpdump.pcap' 
+                });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `merged_pcap_${userId}.pcap`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                this.pcapDownloadStatus = {
+                    type: 'success',
+                    message: 'PCAP-Datei erfolgreich heruntergeladen'
+                };
+                
+                this.toast.add({
+                    severity: 'success',
+                    summary: 'PCAP Download',
+                    detail: 'PCAP-Datei wurde erfolgreich heruntergeladen',
+                    life: 3000
+                });
+                
+            } catch (error) {
+                console.error('Error downloading PCAP:', error);
+                
+                let errorMessage = 'Fehler beim Herunterladen der PCAP-Datei';
+                
+                if (error.response) {
+                    if (error.response.status === 404) {
+                        errorMessage = 'PCAP-Datei nicht gefunden. Stellen Sie sicher, dass Ihre Topologie aktiv ist.';
+                    } else if (error.response.status === 500) {
+                        errorMessage = 'Server-Fehler beim Herunterladen der PCAP-Datei';
+                    }
+                }
+                
+                this.pcapDownloadStatus = {
+                    type: 'error',
+                    message: errorMessage
+                };
+                
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'PCAP Download Fehler',
+                    detail: errorMessage,
+                    life: 5000
+                });
+            } finally {
+                this.pcapDownloading = false;
+            }
         },
 
 
@@ -2146,5 +2263,45 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--nlb-border-dark);
+}
+
+/* PCAP Download Styling */
+.pcap-description {
+    color: var(--nlb-text-secondary);
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.pcap-status {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pcap-status i {
+    font-size: 1rem;
+}
+
+.pcap-status .success {
+    color: var(--nlb-success-dark);
+}
+
+.pcap-status .error {
+    color: var(--nlb-error-dark);
+}
+
+.config-card:has(.pcap-description) {
+    background: var(--nlb-bg-primary);
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid var(--nlb-border-light);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px var(--nlb-border-medium);
 }
 </style>

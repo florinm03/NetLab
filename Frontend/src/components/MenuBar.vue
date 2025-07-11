@@ -167,7 +167,6 @@ const userIconClass = computed(() => {
 const triggerEasterEgg = () => {
     const currentTime = Date.now();
     
-    // Reset if more than 2 seconds have passed since last click
     if (currentTime - lastClickTime.value > 2000) {
         clickCount.value = 0;
     }
@@ -175,27 +174,22 @@ const triggerEasterEgg = () => {
     clickCount.value++;
     lastClickTime.value = currentTime;
     
-    // Clear existing timeout
     if (clickTimeout.value) {
         clearTimeout(clickTimeout.value);
     }
     
-    // Set timeout to reset click count if no more clicks
     clickTimeout.value = setTimeout(() => {
         clickCount.value = 0;
     }, 2000);
     
-    // Only trigger easter egg after 5 clicks
     if (clickCount.value >= 5) {
         easterEggActive.value = true;
         showConfetti.value = true;
         messageClicked.value = false;
         
-        // Select a random message
         const randomIndex = Math.floor(Math.random() * easterEggMessages.length);
         currentMessage.value = easterEggMessages[randomIndex];
         
-        // Reset click count after triggering
         clickCount.value = 0;
         
         setTimeout(() => {
