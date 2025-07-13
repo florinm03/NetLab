@@ -1,10 +1,12 @@
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify, make_response, current_app
 import logging
-from services.terminal_service import TerminalService
 
 logger = logging.getLogger(__name__)
 terminal_bp = Blueprint('terminal', __name__, url_prefix='/api/ttyd')
-terminal_service = TerminalService()
+
+def get_terminal_service():
+    """Get the global terminal service instance from the app context"""
+    return current_app.terminal_service
 
 @terminal_bp.route('/getOwnNodes', methods=['GET'])
 def get_own_nodes():
@@ -14,6 +16,7 @@ def get_own_nodes():
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id parameter is required'}), 400
 
+        terminal_service = get_terminal_service()
         result = terminal_service.get_own_nodes(user_id, request.host)
         return jsonify(result), 200
 
@@ -25,6 +28,7 @@ def get_own_nodes():
 def start_ttyd(container_name):
     """Start ttyd terminal for a specific container"""
     try:
+        terminal_service = get_terminal_service()
         session_id = request.headers.get('X-Session-ID') or \
                     request.cookies.get('ttyd_session') or \
                     terminal_service.generate_session_id()
@@ -40,6 +44,7 @@ def start_ttyd(container_name):
 def init_ttyd_session():
     """Initialize a temporary ttyd session"""
     try:
+        terminal_service = get_terminal_service()
         session_id = request.cookies.get('ttyd_session') or terminal_service.generate_session_id()
         response = jsonify({
             'status': 'success',
@@ -64,6 +69,7 @@ def cleanup_sessions():
         data = request.get_json() or {}
         user_id = data.get('user_id')
         
+        terminal_service = get_terminal_service()
         if user_id:
             terminal_service.cleanup_all_sessions(user_id)
             return jsonify({
@@ -85,6 +91,7 @@ def cleanup_sessions():
 def get_session_status():
     """Get status of all ttyd sessions"""
     try:
+        terminal_service = get_terminal_service()
         status_info = {
             'active_sessions': len(terminal_service.active_sessions),
             'container_ports': len(terminal_service.container_ports),
