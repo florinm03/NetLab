@@ -3,16 +3,6 @@
         <!-- Graph Header -->
         <div class="graph-header">
             <h3>Topologie Visualisierung</h3>
-            <div class="graph-controls">
-                <Button 
-                    icon="pi pi-trash" 
-                    @click="clearGraph" 
-                    text 
-                    size="small"
-                    severity="danger"
-                    title="Alle Knoten löschen"
-                />
-            </div>
         </div>
 
         <!-- Simple Graph Visualization -->
@@ -244,9 +234,7 @@ export default {
                 y: targetY + unitY * this.nodeRadius
             };
         },
-        clearGraph() {
-            this.$emit('clear-all');
-        },
+
 
         getNodeDisplayName(containerName, index) {
             if (!containerName) {
@@ -299,11 +287,6 @@ export default {
     color: var(--nlb-text-primary);
     font-size: 18px;
     font-weight: 600;
-}
-
-.graph-controls {
-    display: flex;
-    gap: 8px;
 }
 
 .graph-canvas {

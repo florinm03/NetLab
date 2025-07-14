@@ -177,6 +177,13 @@
                                             @click="toggleAutoRefresh"
                                             :class="['action-button', autoRefreshEnabled ? 'primary' : 'secondary']"
                                         />
+                                        <Button
+                                            label="Alle Knoten löschen"
+                                            icon="pi pi-trash"
+                                            @click="clearAllNodes"
+                                            :disabled="ownNodes.length === 0"
+                                            class="action-button danger"
+                                        />
                                     </div>
                                 </div>
 
@@ -2154,6 +2161,19 @@ export default {
     background: var(--nlb-bg-primary);
     color: var(--nlb-text-primary);
     border-color: var(--nlb-border-medium);
+}
+
+.action-button.danger {
+    background: var(--nlb-bg-primary);
+    border: 1.5px solid var(--nlb-border-medium);
+    color: var(--nlb-text-primary);
+    box-shadow: 0 2px 8px var(--nlb-border-medium);
+}
+
+.action-button.danger:hover:not(:disabled) {
+    background: var(--nlb-error);
+    color: var(--nlb-text-light);
+    box-shadow: 0 4px 16px var(--nlb-error);
 }
 
 /* Step Actions */
