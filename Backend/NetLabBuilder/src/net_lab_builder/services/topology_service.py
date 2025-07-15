@@ -16,7 +16,6 @@ class TopologyService:
     def get_user_topologies(self, user_id):
         """Get all topologies for a specific user"""
         try:
-            # Get all containers for this user
             containers = self.client.containers.list(
                 filters={'name': f'{user_id}'}
             )
@@ -109,30 +108,47 @@ class TopologyService:
     def get_node_routing(self, node_id):
         """Get routing table for a specific node"""
         try:
-            # Find the container by node_id
+            # Find the container by node_id (exact match)
             containers = self.client.containers.list(
                 filters={'name': node_id}
             )
             
             if not containers:
-                return {
-                    'status': 'error',
-                    'message': f'Node {node_id} not found'
-                }
+                # Try to find container by partial name match
+                logger.info(f"Exact match not found for {node_id}, trying partial match")
+                all_containers = self.client.containers.list()
+                matching_containers = [c for c in all_containers if node_id in c.name]
+                
+                if matching_containers:
+                    containers = matching_containers
+                    logger.info(f"Found {len(containers)} containers with partial match: {[c.name for c in containers]}")
+                else:
+                    logger.error(f"Node {node_id} not found (exact or partial match)")
+                    return {
+                        'status': 'error',
+                        'message': f'Node {node_id} not found'
+                    }
             
             container = containers[0]
+            logger.info(f"Found container {container.name} for node {node_id}")
             
             # Execute netstat -r command in the container
             result = container.exec_run('netstat -r')
             
+            logger.info(f"netstat -r exit code: {result.exit_code}")
+            logger.info(f"netstat -r output: {result.output.decode('utf-8')}")
+            
             if result.exit_code != 0:
+                error_msg = f'Failed to get routing table: {result.output.decode("utf-8")}'
+                logger.error(error_msg)
                 return {
                     'status': 'error',
-                    'message': f'Failed to get routing table: {result.output.decode("utf-8")}'
+                    'message': error_msg
                 }
             
             # Parse the routing table output
             routes = self.parse_netstat_output(result.output.decode('utf-8'))
+            logger.info(f"Parsed routes: {routes}")
             
             return {
                 'status': 'success',
@@ -149,14 +165,19 @@ class TopologyService:
         routes = []
         lines = output.strip().split('\n')
         
+        logger.info(f"Parsing netstat output with {len(lines)} lines")
+        
         # Skip header lines
         for line in lines:
             if line.startswith('Kernel') or line.startswith('Destination') or not line.strip():
+                logger.debug(f"Skipping header line: {line}")
                 continue
             
             parts = line.split()
+            logger.debug(f"Processing line: {line} -> {parts}")
+            
             if len(parts) >= 6:
-                routes.append({
+                route = {
                     'destination': parts[0],
                     'gateway': parts[1],
                     'genmask': parts[2],
@@ -165,8 +186,13 @@ class TopologyService:
                     'window': parts[5],
                     'irtt': parts[6] if len(parts) > 6 else '',
                     'iface': parts[7] if len(parts) > 7 else ''
-                })
+                }
+                routes.append(route)
+                logger.debug(f"Added route: {route}")
+            else:
+                logger.warning(f"Line has insufficient parts: {line} -> {parts}")
         
+        logger.info(f"Parsed {len(routes)} routes")
         return routes
 
     def delete_node(self, user_id, node_id):

@@ -1057,11 +1057,15 @@ export default {
 
         async fetchRoutingTable(node) {
             try {
+                console.log('Fetching routing table for node:', node.name);
                 const response = await this.$axios.get(`/node-routing/${node.name}`);
+                console.log('Routing table response:', response.data);
+                
                 if (response.data.status === 'success') {
                     const realRoutes = response.data.routes;
                     
                     if (realRoutes && realRoutes.length > 0) {
+                        console.log('Successfully fetched routes:', realRoutes);
                         return realRoutes;
                     } else {
                         throw new Error('Keine Routing-Daten verfügbar');
@@ -1071,6 +1075,7 @@ export default {
                 }
             } catch (error) {
                 console.error('Error fetching routing table:', error);
+                console.error('Node data:', node);
                 const nodeIndex = this.ownNodes.findIndex(n => n.name === node.name);
                 const nodeNumber = this.getNodeDisplayName(node.name, nodeIndex);
                 return [
@@ -1286,14 +1291,25 @@ export default {
                     responseType: 'blob'
                 });
                 
-                // Create a download link
+                // Create a download link with timestamp
                 const blob = new Blob([response.data], { 
                     type: 'application/vnd.tcpdump.pcap' 
                 });
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `merged_pcap_${userId}.pcap`;
+                
+                // Add timestamp and topology type to filename
+                const now = new Date();
+                const timestamp = now.toISOString()
+                    .replace(/[:.]/g, '-')  // Replace colons and dots with hyphens
+                    .replace('T', '_')      // Replace T with underscore
+                    .slice(0, 16);          // Remove seconds, milliseconds and timezone
+                
+                // Get topology type from selected topology
+                const topologyType = this.selectedTopology ? this.selectedTopology.code : 'unknown';
+                
+                link.download = `merged_pcap_${userId}_${topologyType}_${timestamp}.pcap`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);

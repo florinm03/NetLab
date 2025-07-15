@@ -28,7 +28,30 @@
         <!-- Data Table Section -->
         <div class="table-section">
             <div class="table-header">
-                <h2>Paket-Details</h2>
+                <!-- <h2>Paket-Details</h2> -->
+                
+                <!-- PCAP Selection Dropdown -->
+                <div class="pcap-selection">
+                    <Dropdown
+                        id="pcap-select"
+                        v-model="selectedPcap"
+                        :options="availablePcaps"
+                        optionLabel="name"
+                        optionValue="path"
+                        placeholder="PCAP-Datei auswählen"
+                        class="pcap-dropdown"
+                        @change="loadSelectedPcap"
+                        :loading="loading"
+                    >
+                        <template #option="slotProps">
+                            <div class="pcap-option">
+                                <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                <span class="pcap-description">{{ slotProps.option.description }}</span>
+                            </div>
+                        </template>
+                    </Dropdown>
+                </div>
+
                 <!-- Filter and Search -->
                 <div class="search-box">
                     <i class="pi pi-search search-icon"></i>
@@ -195,6 +218,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import Dropdown from "primevue/dropdown";
 import { useToast } from "primevue/usetoast";
 
 const toast = useToast();
@@ -204,6 +228,31 @@ const selectedRow = ref(null);
 const loading = ref(true);
 const searchFilter = ref("");
 const selectedProtocols = ref([]);
+
+// PCAP Selection
+const selectedPcap = ref(null);
+const availablePcaps = ref([
+    {
+        name: "Mesh Demo",
+        path: "/src/pcap_demos/json/mesh.json",
+        description: "Mesh-Topologie Demo PCAP-Datei"
+    },
+    {
+        name: "Ring Demo",
+        path: "/src/pcap_demos/json/ring.json",
+        description: "Ring-Topologie Demo PCAP-Datei"
+    },
+    {
+        name: "Star Demo",
+        path: "/src/pcap_demos/json/star.json",
+        description: "Stern-Topologie Demo PCAP-Datei"
+    },
+    {
+        name: "Tree Demo",
+        path: "/src/pcap_demos/json/tree.json",
+        description: "Baum-Topologie Demo PCAP-Datei"
+    }
+]);
 
 // Pagination properties
 const rowsPerPage = ref(50);
@@ -301,7 +350,7 @@ const getProtocolClass = (protocol) => {
     if (["http", "https", "http2"].includes(proto)) return "protocol-http";
     if (["tcp", "udp"].includes(proto)) return "protocol-transport";
     if (["dns"].includes(proto)) return "protocol-dns";
-    if (["icmp", "igmp", "arp"].includes(proto)) return "protocol-network";
+    if (["icmp", "igmp", "arp", "ospf", "icmpv6"].includes(proto)) return "protocol-network";
     if (["tls", "ssl"].includes(proto)) return "protocol-security";
     return "protocol-other";
 };
@@ -320,163 +369,11 @@ const copyPacketData = async (packet) => {
     }
 };
 
-// protocol extraction and packet parsing logic
-const findProperty = (obj, propName) => {
-    if (!obj || typeof obj !== "object") return null;
-    const lowerPropName = propName.toLowerCase();
-    const key = Object.keys(obj).find((k) => k.toLowerCase() === lowerPropName);
-    return key ? obj[key] : null;
-};
-
-const extractProtocols = (frame) => {
-    const protocolsStr = findProperty(frame, "frame.protocols");
-    if (!protocolsStr) return [];
-    return protocolsStr.split(":");
-};
-
-const getTopProtocol = (protocols) => {
-    if (!protocols || protocols.length === 0) return "";
-    const lowerProtocols = [
-        "sll",
-        "ethertype",
-        "eth",
-        "frame",
-        "ip",
-        "ipv6",
-        "data",
-    ];
-    for (let i = protocols.length - 1; i >= 0; i--) {
-        const proto = protocols[i].toLowerCase();
-        if (!lowerProtocols.includes(proto)) {
-            return proto;
-        }
-    }
-    return protocols[protocols.length - 1];
-};
-
-const extractHttpInfo = (layers) => {
-    const http = layers.http || layers.http2;
-    if (!http) return "";
-
-    const requestMethod = http["http.request.method"];
-    if (requestMethod) {
-        const uri =
-            http["http.request.full_uri"] || http["http.request.uri"] || "";
-        return `${requestMethod} ${uri}`;
-    }
-
-    const responseCode = http["http.response.code"];
-    if (responseCode) {
-        const phrase = http["http.response.phrase"] || "";
-        return `Status: ${responseCode} ${phrase}`;
-    }
-
-    return "HTTP-Daten";
-};
-
-const extractDnsInfo = (layers) => {
-    const dns = layers.dns;
-    if (!dns) return "";
-
-    const queryName = dns["dns.qry.name"];
-    if (queryName) {
-        const queryType = dns["dns.qry.type"];
-        return `Standard query ${queryType} ${queryName}`;
-    }
-
-    const respName = dns["dns.resp.name"];
-    if (respName) {
-        const answers = dns["dns.count.answers"];
-        return `Standard query response ${respName} with ${answers} answers`;
-    }
-
-    return "DNS-Paket";
-};
-
-const extractArpInfo = (layers) => {
-    const arp = layers.arp;
-    if (!arp) return "";
-    const opcode = arp["arp.opcode"];
-    const srcIp = arp["arp.src.proto_ipv4"];
-    const dstIp = arp["arp.dst.proto_ipv4"];
-    const srcMac = arp["arp.src.hw_mac"];
-
-    if (opcode === "1") {
-        // Request
-        return `Who has ${dstIp}? Tell ${srcIp}`;
-    }
-    if (opcode === "2") {
-        // Reply
-        return `${srcIp} is at ${srcMac}`;
-    }
-    return `ARP Opcode: ${opcode}`;
-};
-
-const extractTcpInfo = (layers) => {
-    const tcp = layers.tcp;
-    if (!tcp) return "";
-
-    const srcPort = tcp["tcp.srcport"];
-    const dstPort = tcp["tcp.dstport"];
-    const flagsTree = tcp["tcp.flags_tree"];
-
-    let flags = [];
-    if (flagsTree) {
-        if (flagsTree["tcp.flags.syn"] === "1") flags.push("SYN");
-        if (flagsTree["tcp.flags.ack"] === "1") flags.push("ACK");
-        if (flagsTree["tcp.flags.fin"] === "1") flags.push("FIN");
-        if (flagsTree["tcp.flags.reset"] === "1") flags.push("RST");
-        if (flagsTree["tcp.flags.push"] === "1") flags.push("PSH");
-    }
-
-    return `${srcPort} → ${dstPort} [${flags.join(", ")}]`;
-};
-
-// --- Hauptfunktion zur Info-Extraktion ---
-
-const extractPacketInfo = (layers, topProto) => {
-    switch (topProto.toLowerCase()) {
-        case "http":
-        case "http2":
-            return extractHttpInfo(layers);
-        case "dns":
-            return extractDnsInfo(layers);
-        case "arp":
-            return extractArpInfo(layers);
-        case "tcp":
-            return extractTcpInfo(layers);
-        case "udp":
-            const udp = layers.udp;
-            if (udp) return `${udp["udp.srcport"]} → ${udp["udp.dstport"]}`;
-            return "UDP-Paket";
-        case "icmp":
-            const icmp = layers.icmp;
-            if (icmp) {
-                const type = icmp["icmp.type"];
-                const code = icmp["icmp.code"];
-                if (type === "8") return "Echo (ping) request";
-                if (type === "0") return "Echo (ping) reply";
-                return `Type ${type}, Code ${code}`;
-            }
-            return "ICMP-Paket";
-        case "tls":
-            const tls = layers.tls;
-            if (tls) {
-                const contentType = tls["tls.record.content_type"];
-                if (contentType === "22") return "Client Hello / Server Hello";
-                if (contentType === "23") return "Application Data";
-                return `TLS Record, Content Type: ${contentType}`;
-            }
-            return "TLS-Paket";
-        default:
-            return `Paket für Protokoll ${topProto.toUpperCase()}`;
-    }
-};
-
-onMounted(async () => {
+// Load PCAP data from selected file
+const loadPcapData = async (filePath) => {
     loading.value = true;
     try {
-        const resp = await fetch("/src/packets.json");
+        const resp = await fetch(filePath);
         if (!resp.ok) {
             throw new Error(
                 `Failed to fetch packets: ${resp.status} ${resp.statusText}`,
@@ -485,65 +382,143 @@ onMounted(async () => {
         const raw = await resp.json();
 
         packets.value = raw.map((pkt) => {
-            const layers = pkt._source.layers;
-            const frame = layers.frame || {};
-            const eth = layers.eth || {};
-            const ip = layers.ip || layers.ipv6 || {};
+            const frameNumber = pkt["frame.number"] || "";
+            const relTime = pkt["frame.time_relative"] || "";
+            // Prefer IPv4, then IPv6, then fallback to empty string
+            const ipSrc = pkt["ip.src"] || pkt["ipv6.src"] || "";
+            const ipDst = pkt["ip.dst"] || pkt["ipv6.dst"] || "";
+            const frameProtocols = pkt["frame.protocols"] || "";
+            const frameLen = pkt["frame.len"] || "";
+            const wsColInfo = pkt["_ws.col.Info"] || pkt["_ws.col.info"] || "";
 
-            const protocols = extractProtocols(frame);
-            const topProto = getTopProtocol(protocols);
-
-            let timeDisplay =
-                frame["frame.time_relative"] || frame["frame.time"] || "";
-            if (timeDisplay && !frame["frame.time_relative"]) {
-                try {
-                    const date = new Date(timeDisplay);
-                    timeDisplay =
-                        date.toLocaleTimeString() +
-                        "." +
-                        date.getMilliseconds().toString().padStart(3, "0");
-                } catch (e) {
-                    // Behalte Originalwert bei Fehler
-                }
-            }
-
-            let source = ip["ip.src"] || ip["ipv6.src"] || "";
-            let dest = ip["ip.dst"] || ip["ipv6.dst"] || "";
-
-            if (layers.sll && !source) {
-                source = layers.sll["sll.src.eth"] || "";
-            }
-
-            if (!source && eth["eth.src"]) {
-                source = eth["eth.src"];
-            }
-            if (!dest && eth["eth.dst"]) {
-                dest = eth["eth.dst"];
-            }
-
-            if (layers.arp) {
-                const arpSrc = layers.arp["arp.src.proto_ipv4"];
-                const arpDst = layers.arp["arp.dst.proto_ipv4"];
-                if (arpSrc) source = arpSrc;
-                if (arpDst) dest = arpDst;
-            }
+            const topProto = extractTopProtocol(frameProtocols);
 
             return {
-                no: frame["frame.number"] || "",
-                time: timeDisplay,
-                src: source,
-                dst: dest,
-                proto: topProto || "",
-                len: frame["frame.len"] || "",
-                info: extractPacketInfo(layers, topProto),
-                raw: layers,
+                no: frameNumber,
+                time: relTime,
+                src: ipSrc,
+                dst: ipDst,
+                proto: topProto,
+                len: frameLen,
+                info: wsColInfo,
+                raw: pkt,
             };
+        });
+
+        // Reset filters and pagination when loading new data
+        clearFilters();
+        resetPagination();
+
+        toast.add({
+            severity: "success",
+            summary: "PCAP geladen",
+            detail: `${packets.value.length} Pakete erfolgreich geladen.`,
+            life: 3000,
         });
     } catch (error) {
         console.error("Error loading packet data:", error);
+        toast.add({
+            severity: "error",
+            summary: "Fehler",
+            detail: "PCAP-Datei konnte nicht geladen werden.",
+            life: 5000,
+        });
     } finally {
         loading.value = false;
     }
+};
+
+// Handle PCAP selection change
+const loadSelectedPcap = () => {
+    if (selectedPcap.value) {
+        loadPcapData(selectedPcap.value);
+    }
+};
+
+// Load PCAPs from database (future implementation)
+const loadPcapsFromDatabase = async () => {
+    try {
+        // Hier können Sie später die PCAPs aus der Datenbank laden
+        // const response = await fetch('/api/pcaps');
+        // const userPcaps = await response.json();
+        // availablePcaps.value = [...availablePcaps.value, ...userPcaps];
+    } catch (error) {
+        console.error("Error loading PCAPs from database:", error);
+    }
+};
+
+// Extract top protocol from frame.protocols string
+const extractTopProtocol = (protocolsStr) => {
+    if (!protocolsStr) return "";
+    
+    const protocols = protocolsStr.split(":");
+    const lowerProtocols = [
+        "sll",
+        "ethertype",
+        "eth",
+        "frame",
+        "ip",
+        "ipv6",
+        "data"
+    ];
+    
+    // Find the first non-lower protocol from the end
+    for (let i = protocols.length - 1; i >= 0; i--) {
+        const proto = protocols[i].toLowerCase();
+        if (!lowerProtocols.includes(proto)) {
+            return proto;
+        }
+    }
+    
+    // If all are lower protocols, return the last one
+    return protocols[protocols.length - 1] || "";
+};
+
+// Format time display
+const formatTime = (timeStr) => {
+    if (!timeStr) return "";
+    
+    try {
+        // Clean up the time string - remove extra spaces and timezone
+        const cleanedTimeStr = timeStr
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .replace(/\s+CEST$/, '') // Remove CEST timezone
+            .replace(/\s+CET$/, ''); // Remove CET timezone
+        
+        // Parse the cleaned time string
+        const date = new Date(cleanedTimeStr);
+        
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+            // If parsing fails, try to extract just the time part
+            const timeMatch = timeStr.match(/(\d{1,2}:\d{2}:\d{2}\.\d+)/);
+            if (timeMatch) {
+                return timeMatch[1];
+            }
+            return timeStr; // Return original if all parsing fails
+        }
+        
+        return date.toLocaleTimeString('de-DE') + "." + 
+               date.getMilliseconds().toString().padStart(3, "0");
+    } catch (e) {
+        // If parsing fails, try to extract just the time part
+        const timeMatch = timeStr.match(/(\d{1,2}:\d{2}:\d{2}\.\d+)/);
+        if (timeMatch) {
+            return timeMatch[1];
+        }
+        return timeStr; // Return original if all parsing fails
+    }
+};
+
+onMounted(async () => {
+    // Set default PCAP selection
+    selectedPcap.value = availablePcaps.value[0].path;
+    
+    // Load PCAPs from database (future feature)
+    await loadPcapsFromDatabase();
+    
+    // Load default PCAP data
+    await loadPcapData(selectedPcap.value);
 });
 </script>
 
@@ -617,6 +592,65 @@ onMounted(async () => {
 .stat-label {
     font-size: 0.9rem;
     opacity: 0.8;
+}
+
+/* PCAP Selection Styles */
+.pcap-selection {
+    display: flex;
+    align-items: center;
+}
+
+.pcap-label {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.pcap-dropdown {
+    min-width: 250px;
+}
+
+.pcap-dropdown :deep(.p-dropdown) {
+    background: var(--nlb-bg-primary);
+    border: 2px solid var(--nlb-border-light);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.pcap-dropdown :deep(.p-dropdown:hover) {
+    border-color: var(--nlb-primary);
+}
+
+.pcap-dropdown :deep(.p-dropdown:focus) {
+    border-color: var(--nlb-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.pcap-dropdown :deep(.p-dropdown-label) {
+    color: var(--nlb-text-primary);
+    font-weight: 500;
+}
+
+.pcap-dropdown :deep(.p-dropdown-trigger) {
+    color: var(--nlb-text-secondary);
+}
+
+.pcap-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pcap-name {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+}
+
+.pcap-description {
+    font-size: 0.8rem;
+    color: var(--nlb-text-secondary);
 }
 
 /* Controls Section */
@@ -1021,6 +1055,18 @@ onMounted(async () => {
 
     .table-header {
         gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .pcap-selection {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .pcap-dropdown {
+        min-width: 100%;
     }
 
     .table-title-section {

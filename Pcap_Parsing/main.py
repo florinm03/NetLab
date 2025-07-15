@@ -1,6 +1,7 @@
 from scapy.all import rdpcap
 import json
 import sys
+import os
 
 def parse_pcap(file_path):
     packets = rdpcap(file_path)
@@ -33,7 +34,10 @@ if __name__ == "__main__":
     file_path = sys.argv[1]
     connection_data = parse_pcap(file_path)
 
-    with open("connections.json", "w") as f:
+    base_name = os.path.splitext(os.path.basename(file_path))[0]
+    output_file = f"{base_name}_connections.json"
+
+    with open(output_file, "w") as f:
         json.dump(connection_data, f, indent=2)
 
-    print("connections.json created!")
+    print(f"{output_file} created!")

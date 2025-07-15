@@ -31,8 +31,25 @@
         <div class="visualization-section">
             <div class="graph-container">
                 <div class="table-header">
-                    <h2>Netzwerk-Topologie</h2>
-
+                    <div class="pcap-selection">
+                        <Dropdown
+                            id="connection-demo-select"
+                            v-model="selectedDemo"
+                            :options="availableDemos"
+                            optionLabel="name"
+                            optionValue="path"
+                            placeholder="Verbindungs-Demo auswählen"
+                            class="pcap-dropdown"
+                            @change="loadSelectedDemo"
+                        >
+                            <template #option="slotProps">
+                                <div class="pcap-option">
+                                    <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                    <span class="pcap-description">{{ slotProps.option.description }}</span>
+                                </div>
+                            </template>
+                        </Dropdown>
+                    </div>
                     <div class="filter-chips">
                         <button @click="resetLayout" class="filter-chip">
                             Layout zurücksetzen
@@ -166,9 +183,11 @@
 
 <script>
 import * as d3 from "d3";
+import Dropdown from "primevue/dropdown";
 
 export default {
     name: "EnhancedNetworkGraph",
+    components: { Dropdown },
     data() {
         return {
             isAnimating: true,
@@ -178,133 +197,31 @@ export default {
             simulation: null,
             nodes: [],
             links: [],
-            rawData: [
+            // Dropdown for connection demos
+            availableDemos: [
                 {
-                    source: "172.104.0.102",
-                    destination: "224.0.0.22",
-                    packets: 12,
+                    name: "Mesh Demo",
+                    path: "/src/pcap_demos/connections/mesh_connections.json",
+                    description: "Mesh-Topologie Demo Verbindungsdaten"
                 },
                 {
-                    source: "172.104.0.102",
-                    destination: "224.0.0.5",
-                    packets: 78,
+                    name: "Ring Demo",
+                    path: "/src/pcap_demos/connections/ring_connections.json",
+                    description: "Ring-Topologie Demo Verbindungsdaten"
                 },
                 {
-                    source: "172.103.0.102",
-                    destination: "224.0.0.5",
-                    packets: 84,
+                    name: "Star Demo",
+                    path: "/src/pcap_demos/connections/star_connections.json",
+                    description: "Stern-Topologie Demo Verbindungsdaten"
                 },
                 {
-                    source: "172.102.0.102",
-                    destination: "224.0.0.5",
-                    packets: 89,
-                },
-                {
-                    source: "172.101.0.102",
-                    destination: "224.0.0.5",
-                    packets: 89,
-                },
-                {
-                    source: "172.103.0.102",
-                    destination: "224.0.0.22",
-                    packets: 12,
-                },
-                {
-                    source: "172.101.0.102",
-                    destination: "224.0.0.22",
-                    packets: 12,
-                },
-                {
-                    source: "172.102.0.102",
-                    destination: "224.0.0.22",
-                    packets: 12,
-                },
-                {
-                    source: "172.104.0.106",
-                    destination: "224.0.0.22",
-                    packets: 12,
-                },
-                {
-                    source: "172.104.0.106",
-                    destination: "224.0.0.5",
-                    packets: 71,
-                },
-                {
-                    source: "172.101.0.103",
-                    destination: "224.0.0.5",
-                    packets: 77,
-                },
-                {
-                    source: "172.102.0.104",
-                    destination: "224.0.0.5",
-                    packets: 77,
-                },
-                {
-                    source: "172.103.0.105",
-                    destination: "224.0.0.5",
-                    packets: 81,
-                },
-                {
-                    source: "172.101.0.103",
-                    destination: "172.101.0.102",
-                    packets: 12,
-                },
-                {
-                    source: "172.102.0.104",
-                    destination: "172.102.0.102",
-                    packets: 12,
-                },
-                {
-                    source: "172.103.0.105",
-                    destination: "172.103.0.102",
-                    packets: 10,
-                },
-                {
-                    source: "172.104.0.102",
-                    destination: "172.104.0.106",
-                    packets: 10,
-                },
-                {
-                    source: "172.103.0.102",
-                    destination: "172.103.0.105",
-                    packets: 10,
-                },
-                {
-                    source: "172.102.0.102",
-                    destination: "172.102.0.104",
-                    packets: 10,
-                },
-                {
-                    source: "172.101.0.102",
-                    destination: "172.101.0.103",
-                    packets: 10,
-                },
-                {
-                    source: "172.101.0.103",
-                    destination: "224.0.0.22",
-                    packets: 6,
-                },
-                {
-                    source: "172.102.0.104",
-                    destination: "224.0.0.22",
-                    packets: 6,
-                },
-                {
-                    source: "172.103.0.105",
-                    destination: "224.0.0.22",
-                    packets: 6,
-                },
-                {
-                    source: "172.104.0.106",
-                    destination: "172.104.0.102",
-                    packets: 8,
-                },
-                {
-                    source: "172.104.0.102",
-                    destination: "224.0.0.6",
-                    packets: 3,
+                    name: "Tree Demo",
+                    path: "/src/pcap_demos/connections/tree_connections.json",
+                    description: "Baum-Topologie Demo Verbindungsdaten"
                 },
             ],
+            selectedDemo: "/src/pcap_demos/connections/mesh_connections.json",
+            rawData: [], // Will be loaded from file
         };
     },
     computed: {
@@ -327,7 +244,7 @@ export default {
         },
     },
     mounted() {
-        this.initGraph();
+        this.loadSelectedDemo();
         window.addEventListener("resize", this.handleResize);
     },
     beforeUnmount() {
@@ -338,9 +255,21 @@ export default {
         }
     },
     methods: {
+        async loadSelectedDemo() {
+            try {
+                const resp = await fetch(this.selectedDemo);
+                if (!resp.ok) throw new Error("Fehler beim Laden der Verbindungsdaten");
+                const data = await resp.json();
+                this.rawData = data;
+                this.processData();
+                this.initGraph();
+            } catch (e) {
+                console.error("Fehler beim Laden der Verbindungsdemo:", e);
+                this.rawData = [];
+                this.processData();
+            }
+        },
         initGraph() {
-            // Process data
-            this.processData();
 
             // Clear previous visualization
             const svg = d3.select(this.$refs.svgRef);
@@ -711,6 +640,65 @@ export default {
     max-width: 600px;
 }
 
+/* PCAP Selection Styles */
+.pcap-selection {
+    display: flex;
+    align-items: center;
+}
+
+.pcap-label {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.pcap-dropdown {
+    min-width: 250px;
+}
+
+.pcap-dropdown :deep(.p-dropdown) {
+    background: var(--nlb-bg-primary);
+    border: 2px solid var(--nlb-border-light);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.pcap-dropdown :deep(.p-dropdown:hover) {
+    border-color: var(--nlb-primary);
+}
+
+.pcap-dropdown :deep(.p-dropdown:focus) {
+    border-color: var(--nlb-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.pcap-dropdown :deep(.p-dropdown-label) {
+    color: var(--nlb-text-primary);
+    font-weight: 500;
+}
+
+.pcap-dropdown :deep(.p-dropdown-trigger) {
+    color: var(--nlb-text-secondary);
+}
+
+.pcap-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pcap-name {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+}
+
+.pcap-description {
+    font-size: 0.8rem;
+    color: var(--nlb-text-secondary);
+}
+
 .header-stats {
     display: flex;
     gap: 1rem;
@@ -753,8 +741,8 @@ export default {
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--nlb-border-light);
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    flex-direction: row;
+    justify-content: flex-start;
     align-items: flex-start;
     gap: 1.5rem;
     flex-wrap: wrap;
