@@ -221,7 +221,7 @@ export default {
                 },
             ],
             selectedDemo: "/src/pcap_demos/connections/mesh_connections.json",
-            rawData: [], // Will be loaded from file
+            rawData: [],
         };
     },
     computed: {

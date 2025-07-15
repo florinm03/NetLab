@@ -438,7 +438,7 @@ const loadSelectedPcap = () => {
 // Load PCAPs from database (future implementation)
 const loadPcapsFromDatabase = async () => {
     try {
-        // Hier können Sie später die PCAPs aus der Datenbank laden
+        // Später die PCAPs aus der Datenbank laden
         // const response = await fetch('/api/pcaps');
         // const userPcaps = await response.json();
         // availablePcaps.value = [...availablePcaps.value, ...userPcaps];
@@ -511,8 +511,23 @@ const formatTime = (timeStr) => {
 };
 
 onMounted(async () => {
-    // Set default PCAP selection
-    selectedPcap.value = availablePcaps.value[0].path;
+    // Check for topology query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const topologyParam = urlParams.get('topology');
+    
+    if (topologyParam) {
+        // Find the PCAP that matches the topology parameter
+        const matchingPcap = availablePcaps.value.find(pcap => pcap.name === topologyParam);
+        if (matchingPcap) {
+            selectedPcap.value = matchingPcap.path;
+        } else {
+            // Fallback to default if no match found
+            selectedPcap.value = availablePcaps.value[0].path;
+        }
+    } else {
+        // Set default PCAP selection
+        selectedPcap.value = availablePcaps.value[0].path;
+    }
     
     // Load PCAPs from database (future feature)
     await loadPcapsFromDatabase();

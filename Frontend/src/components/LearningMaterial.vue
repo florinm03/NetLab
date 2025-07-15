@@ -24,12 +24,6 @@
                     <div class="topology-icon">{{ topology.icon }}</div>
                     <div class="topology-name">{{ topology.name }}</div>
                     <div class="topology-brief">{{ topology.brief }}</div>
-                    <Button 
-                        label="Traffic-Analyse" 
-                        icon="pi pi-chart-line" 
-                        class="p-button-sm"
-                        @click.stop="navigateToLab"
-                    />
                 </div>
             </template>
         </Carousel>
@@ -73,6 +67,15 @@
             <div class="details-section">
                 <h4>Verwendung</h4>
                 <p>{{ topologyData[selectedTopology].usage }}</p>
+            </div>
+
+            <div class="details-section">
+                <Button 
+                    label="Traffic-Analyse anzeigen" 
+                    icon="pi pi-chart-line" 
+                    class="p-button-primary"
+                    @click="navigateToPcapTable"
+                />
             </div>
         </div>
 
@@ -312,8 +315,25 @@ export default {
         selectTopology(topologyKey) {
             this.selectedTopology = topologyKey;
         },
-        navigateToLab() {
-            this.$router.push('/controller');
+        navigateToPcapTable() {
+            // Map topology keys to PCAP demo names
+            const topologyToPcapMap = {
+                'mesh': 'Mesh Demo',
+                'ring': 'Ring Demo', 
+                'star': 'Star Demo',
+                'tree': 'Tree Demo'
+            };
+            
+            const pcapName = topologyToPcapMap[this.selectedTopology];
+            if (pcapName) {
+                this.$router.push({
+                    path: '/pcap-table',
+                    query: { topology: pcapName }
+                });
+            } else {
+                // For topologies without demo data, just navigate to the table
+                this.$router.push('/pcap-table');
+            }
         }
     },
 };
@@ -374,7 +394,7 @@ export default {
     flex-direction: column;
     align-items: center;
     gap: 0.6rem;
-    height: 260px;
+    height: 200px;
     width: 100%;
     min-width: 150px;
     max-width: 200px;
@@ -421,10 +441,10 @@ export default {
     flex-grow: 1;
 }
 
-.p-button-sm {
+.p-button-primary {
     background: var(--nlb-primary);
     border: none;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
     border-radius: 8px;
     color: var(--nlb-text-light);
     font-weight: 600;
@@ -432,13 +452,15 @@ export default {
     align-items: center;
     gap: 0.5rem;
     transition: all 0.3s ease;
-    font-size: 0.85rem;
+    font-size: 1rem;
     white-space: nowrap;
+    margin-top: 1rem;
 }
 
-.p-button-sm:hover {
+.p-button-primary:hover {
     background: var(--nlb-primary-dark);
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .topology-details {
@@ -614,7 +636,7 @@ export default {
     .topology-item {
         margin: 0 0.125rem;
         padding: 0.75rem;
-        height: 240px;
+        height: 180px;
         min-width: 140px;
         max-width: 180px;
     }
