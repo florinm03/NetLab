@@ -38,6 +38,11 @@ const router = createRouter({
       name: "pcap-table",
       component: () => import("@/views/PcapTableView.vue"),
     },
+    {
+      path: "/saved-pcaps",
+      name: "saved-pcaps",
+      component: () => import("@/views/SavedPcapsView.vue"),
+    },
   ],
 });
 

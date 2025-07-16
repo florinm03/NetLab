@@ -221,20 +221,30 @@
                                 <div class="config-card">
                                     <div class="card-header">
                                         <i class="pi pi-download"></i>
-                                        <h4>PCAP Download</h4>
+                                        <h4>PCAP Download & Speicherung</h4>
                                     </div>
                                     <div class="card-content">
                                         <p class="pcap-description">
-                                            Laden Sie die gemergte PCAP-Datei herunter, die alle Netzwerk-Traffic-Daten enthält.
+                                            Laden Sie die gemergte PCAP-Datei herunter oder speichern Sie sie in der Datenbank für spätere Analyse.
                                         </p>
-                                        <Button
-                                            label="PCAP herunterladen"
-                                            icon="pi pi-download"
-                                            @click="downloadPcap"
-                                            :loading="pcapDownloading"
+                                        <div class="pcap-actions">
+                                            <Button
+                                                label="PCAP herunterladen"
+                                                icon="pi pi-download"
+                                                @click="downloadPcap"
+                                                :loading="pcapDownloading"
+                                                :disabled="ownNodes.length === 0"
+                                                class="action-button primary"
+                                            />
+                                                                                    <Button
+                                            label="In Datenbank speichern"
+                                            icon="pi pi-database"
+                                            @click="savePcapToDatabase"
+                                            :loading="pcapSaving"
                                             :disabled="ownNodes.length === 0"
-                                            class="action-button primary"
+                                            class="action-button secondary"
                                         />
+                                        </div>
                                         <div v-if="pcapDownloadStatus" class="pcap-status">
                                             <i :class="pcapDownloadStatus.type === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
                                             <span>{{ pcapDownloadStatus.message }}</span>
@@ -477,19 +487,28 @@
                                 <div class="config-card">
                                     <div class="card-header">
                                         <i class="pi pi-download"></i>
-                                        <h4>PCAP-Datei herunterladen</h4>
+                                        <h4>PCAP-Datei herunterladen & speichern</h4>
                                     </div>
                                     <div class="card-content">
                                         <p class="pcap-description">
-                                            Laden Sie die gemergte PCAP-Datei herunter, die alle Netzwerk-Traffic-Daten Ihrer Topologie enthält.
+                                            Laden Sie die gemergte PCAP-Datei herunter oder speichern Sie sie in der Datenbank für spätere Analyse.
                                         </p>
-                                        <Button
-                                            label="PCAP herunterladen"
-                                            icon="pi pi-download"
-                                            @click="downloadPcap"
-                                            :loading="pcapDownloading"
-                                            class="action-button primary"
+                                        <div class="pcap-actions">
+                                            <Button
+                                                label="PCAP herunterladen"
+                                                icon="pi pi-download"
+                                                @click="downloadPcap"
+                                                :loading="pcapDownloading"
+                                                class="action-button primary"
+                                            />
+                                                                                    <Button
+                                            label="In Datenbank speichern"
+                                            icon="pi pi-database"
+                                            @click="savePcapToDatabase"
+                                            :loading="pcapSaving"
+                                            class="action-button secondary"
                                         />
+                                        </div>
                                         <div v-if="pcapDownloadStatus" class="pcap-status">
                                             <i :class="pcapDownloadStatus.type === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
                                             <span>{{" " + pcapDownloadStatus.message }}</span>
@@ -633,6 +652,7 @@ export default {
             refreshInterval: null,
             autoRefreshEnabled: false,
             pcapDownloading: false,
+            pcapSaving: false,
             pcapDownloadStatus: null,
         };
     },
@@ -1353,6 +1373,82 @@ export default {
                 });
             } finally {
                 this.pcapDownloading = false;
+            }
+        },
+
+        async savePcapToDatabase() {
+            try {
+                this.pcapSaving = true;
+                this.pcapDownloadStatus = null;
+                
+                const userId = this.userId;
+                console.log("--------------------------------");
+                console.log('Saving PCAP to database for user:', userId);
+                
+                // Prepare topology info
+                const topologyInfo = {
+                    name: this.selectedTopology ? this.selectedTopology.name : 'Unknown',
+                    type: this.selectedTopology ? this.selectedTopology.code : 'unknown',
+                    node_count: this.ownNodes.length,
+                    capture_duration: 0 // Could be calculated if we track start time
+                };
+                
+                // Prepare connections info
+                const connections = this.graphConnections.map(conn => ({
+                    source: conn.source,
+                    target: conn.target,
+                    type: 'ethernet'
+                }));
+                
+                const response = await this.$axios.post(`/save-pcap/${userId}`, {
+                    topology_info: topologyInfo,
+                    connections: connections
+                });
+                
+                if (response.data.status === 'success') {
+                    this.pcapDownloadStatus = {
+                        type: 'success',
+                        message: `PCAP-Datei erfolgreich in Datenbank gespeichert (ID: ${response.data.pcap_id})`
+                    };
+                    
+                    this.toast.add({
+                        severity: 'success',
+                        summary: 'PCAP Speicherung',
+                        detail: 'PCAP-Datei wurde erfolgreich in der Datenbank gespeichert',
+                        life: 5000
+                    });
+                } else {
+                    throw new Error(response.data.message || 'Unknown error');
+                }
+                
+            } catch (error) {
+                console.error('Error saving PCAP to database:', error);
+                
+                let errorMessage = 'Fehler beim Speichern der PCAP-Datei in der Datenbank';
+                
+                if (error.response) {
+                    if (error.response.status === 404) {
+                        errorMessage = 'PCAP-Datei nicht gefunden. Stellen Sie sicher, dass Ihre Topologie aktiv ist.';
+                    } else if (error.response.status === 500) {
+                        errorMessage = 'Server-Fehler beim Speichern der PCAP-Datei';
+                    } else if (error.response.data && error.response.data.message) {
+                        errorMessage = error.response.data.message;
+                    }
+                }
+                
+                this.pcapDownloadStatus = {
+                    type: 'error',
+                    message: errorMessage
+                };
+                
+                this.toast.add({
+                    severity: 'error',
+                    summary: 'PCAP Speicherung Fehler',
+                    detail: errorMessage,
+                    life: 5000
+                });
+            } finally {
+                this.pcapSaving = false;
             }
         },
 
@@ -2307,6 +2403,18 @@ export default {
     margin-bottom: 16px;
     font-size: 0.9rem;
     line-height: 1.4;
+}
+
+.pcap-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.pcap-actions .action-button {
+    flex: 1;
+    min-width: 150px;
 }
 
 .pcap-status {

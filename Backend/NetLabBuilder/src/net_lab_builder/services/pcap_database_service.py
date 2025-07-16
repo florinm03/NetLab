@@ -13,7 +13,7 @@ class PcapDatabaseService:
             'host': 'localhost',
             'port': 3307,
             'user': 'pcap_user',
-            'password': 'pcap_user_password',
+            'password': 'pcap_user_password', # TODO 
             'database': 'pcap_db',
             'charset': 'utf8mb4',
             'autocommit': True
@@ -39,7 +39,7 @@ class PcapDatabaseService:
     def save_pcap_file(self, creator: str, file_path: str, topology_info: Dict, 
                        metadata: Dict, connections: List[Dict]) -> Optional[int]:
         """
-        Save PCAP file information to database
+        Save PCAP file and metadata to database
         
         Args:
             creator: User ID of the creator
@@ -57,21 +57,29 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor()
             
-            # Get file size
-            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            # Read PCAP file data
+            pcap_data = None
+            file_size = 0
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    pcap_data = f.read()
+                file_size = len(pcap_data)
+            else:
+                file_size = metadata.get('file_size', 0)
             
-            # Insert into single pcap_files table with all data
+            # Insert into single pcap_files table with all data including PCAP file
             insert_query = """
                 INSERT INTO pcap_files 
-                (creator, filename, file_path, file_size, topology_name, topology_type, 
+                (creator, filename, file_path, pcap_data, file_size, topology_name, topology_type, 
                  node_count, capture_duration, metadata_json, connections_json, connection_count)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             cursor.execute(insert_query, (
                 creator,
-                os.path.basename(file_path),
-                file_path,
+                os.path.basename(file_path) if file_path else f"pcap_{creator}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pcap",
+                "database_stored",  # Indicate file is stored in database
+                pcap_data,
                 file_size,
                 topology_info.get('name', 'Unknown'),
                 topology_info.get('type', 'unknown'),
@@ -84,7 +92,7 @@ class PcapDatabaseService:
             
             pcap_id = cursor.lastrowid
             cursor.close()
-            logger.info(f"Saved PCAP file with ID: {pcap_id}")
+            logger.info(f"Saved PCAP file and metadata with ID: {pcap_id}")
             return pcap_id
             
         except mysql.connector.Error as e:
@@ -104,7 +112,7 @@ class PcapDatabaseService:
             creator: User ID
             
         Returns:
-            List of PCAP file dictionaries
+            List of PCAP file dictionaries (without pcap_data for JSON serialization)
         """
         try:
             if not self.connect():
@@ -113,7 +121,10 @@ class PcapDatabaseService:
             cursor = self.connection.cursor(dictionary=True)
             
             query = """
-                SELECT * FROM pcap_files 
+                SELECT id, creator, filename, file_path, file_size, topology_name, topology_type, 
+                       node_count, capture_duration, metadata_json, connections_json, connection_count,
+                       created_at, updated_at
+                FROM pcap_files 
                 WHERE creator = %s 
                 ORDER BY created_at DESC
             """
@@ -130,12 +141,13 @@ class PcapDatabaseService:
         finally:
             self.disconnect()
 
-    def get_pcap_file_by_id(self, pcap_id: int) -> Optional[Dict]:
+    def get_pcap_file_by_id(self, pcap_id: int, include_data: bool = False) -> Optional[Dict]:
         """
         Get specific PCAP file by ID
         
         Args:
             pcap_id: PCAP file ID
+            include_data: Whether to include pcap_data (for downloads)
             
         Returns:
             PCAP file dictionary or None
@@ -146,7 +158,16 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor(dictionary=True)
             
-            query = "SELECT * FROM pcap_files WHERE id = %s"
+            if include_data:
+                query = "SELECT * FROM pcap_files WHERE id = %s"
+            else:
+                query = """
+                    SELECT id, creator, filename, file_path, file_size, topology_name, topology_type, 
+                           node_count, capture_duration, metadata_json, connections_json, connection_count,
+                           created_at, updated_at
+                    FROM pcap_files WHERE id = %s
+                """
+            
             cursor.execute(query, (pcap_id,))
             result = cursor.fetchone()
             
@@ -161,7 +182,7 @@ class PcapDatabaseService:
 
     def delete_pcap_file(self, pcap_id: int, creator: str) -> bool:
         """
-        Delete PCAP file from database
+        Delete PCAP metadata from database
         
         Args:
             pcap_id: PCAP file ID
@@ -176,38 +197,28 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor()
             
-            # First get the file path
-            select_query = "SELECT file_path FROM pcap_files WHERE id = %s AND creator = %s"
-            cursor.execute(select_query, (pcap_id, creator))
-            result = cursor.fetchone()
-            
-            if not result:
-                logger.warning(f"PCAP file {pcap_id} not found or not owned by {creator}")
-                return False
-            
-            file_path = result[0]
-            
-            # Delete from database (cascade will handle related tables)
+            # Delete from database
             delete_query = "DELETE FROM pcap_files WHERE id = %s AND creator = %s"
             cursor.execute(delete_query, (pcap_id, creator))
             
-            # Delete actual file if it exists
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                logger.info(f"Deleted file: {file_path}")
+            if cursor.rowcount == 0:
+                logger.warning(f"PCAP file {pcap_id} not found or not owned by {creator}")
+                return False
             
             cursor.close()
-            logger.info(f"Deleted PCAP file with ID: {pcap_id}")
+            logger.info(f"Deleted PCAP metadata with ID: {pcap_id}")
             return True
             
         except mysql.connector.Error as e:
             logger.error(f"Database error: {e}")
             return False
         except Exception as e:
-            logger.error(f"Error deleting PCAP file: {e}")
+            logger.error(f"Error deleting PCAP metadata: {e}")
             return False
         finally:
             self.disconnect()
+
+
 
     def get_pcap_statistics(self, creator: str) -> Dict:
         """

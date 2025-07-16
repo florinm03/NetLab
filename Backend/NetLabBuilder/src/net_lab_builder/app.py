@@ -22,24 +22,23 @@ from routes.topology import topology_bp
 from routes.container import container_bp
 from routes.terminal import terminal_bp
 from routes.validation import validation_bp
+from routes.pcap_database import pcap_db_bp
 
 app.register_blueprint(topology_bp)
 app.register_blueprint(container_bp)
 app.register_blueprint(terminal_bp)
 app.register_blueprint(validation_bp)
+app.register_blueprint(pcap_db_bp)
 
-# Import terminal service to set up cleanup
 from services.terminal_service import TerminalService
 
-# Create global terminal service instance
 terminal_service = TerminalService()
 
-# Make terminal service available in app context
 app.terminal_service = terminal_service
 
 @app.route('/')
 def home():
-    return "NetLabBuilder API is running! Use /api/start-container to begin."
+    return "NetLabBuilder API is running! Use /api/start-container to begin. :))"
 
 def cleanup_on_exit():
     """Cleanup function called when the application exits"""
@@ -51,7 +50,7 @@ def cleanup_on_exit():
     except Exception as e:
         logger.error(f"Error during cleanup: {str(e)}")
 
-# Register cleanup function
+
 atexit.register(cleanup_on_exit)
 
 if __name__ == '__main__':

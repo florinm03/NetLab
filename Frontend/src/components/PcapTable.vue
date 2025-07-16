@@ -373,12 +373,38 @@ const copyPacketData = async (packet) => {
 const loadPcapData = async (filePath) => {
     loading.value = true;
     try {
-        const resp = await fetch(filePath);
-        if (!resp.ok) {
-            throw new Error(
-                `Failed to fetch packets: ${resp.status} ${resp.statusText}`,
-            );
+        // Check if this is a database PCAP (API endpoint)
+        const isDatabasePcap = filePath.startsWith('/api/pcap/');
+        
+        let resp;
+        if (isDatabasePcap) {
+            // For database PCAPs, we need to handle binary data differently
+            resp = await fetch(filePath);
+            if (!resp.ok) {
+                throw new Error(
+                    `Failed to fetch PCAP from database: ${resp.status} ${resp.statusText}`,
+                );
+            }
+            // For now, we'll show a message that binary PCAPs need to be converted
+            // In a real implementation, you'd need to convert PCAP to JSON format
+            toast.add({
+                severity: "info",
+                summary: "PCAP Format",
+                detail: "Gespeicherte PCAP-Dateien werden noch nicht unterstützt. Verwenden Sie die Demo-Dateien.",
+                life: 5000,
+            });
+            loading.value = false;
+            return;
+        } else {
+            // Regular JSON PCAP files
+            resp = await fetch(filePath);
+            if (!resp.ok) {
+                throw new Error(
+                    `Failed to fetch packets: ${resp.status} ${resp.statusText}`,
+                );
+            }
         }
+        
         const raw = await resp.json();
 
         packets.value = raw.map((pkt) => {
@@ -435,13 +461,29 @@ const loadSelectedPcap = () => {
     }
 };
 
-// Load PCAPs from database (future implementation)
+// Load PCAPs from database
 const loadPcapsFromDatabase = async () => {
     try {
-        // Später die PCAPs aus der Datenbank laden
-        // const response = await fetch('/api/pcaps');
-        // const userPcaps = await response.json();
-        // availablePcaps.value = [...availablePcaps.value, ...userPcaps];
+        // Get user ID from store or localStorage
+        const userId = localStorage.getItem('userId') || 'guest';
+        
+        const response = await fetch(`/api/pcaps/${userId}`);
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.pcaps) {
+            // Convert database PCAPs to the format expected by the dropdown
+            const dbPcaps = result.pcaps.map(pcap => ({
+                name: `${pcap.topology_name} (${pcap.filename})`,
+                path: `/api/pcap/${pcap.id}/download`,
+                description: `Gespeicherte PCAP-Datei - ${pcap.topology_type} Topologie mit ${pcap.node_count} Knoten`,
+                isDatabase: true,
+                pcapId: pcap.id,
+                metadata: pcap.metadata_json ? JSON.parse(pcap.metadata_json) : null
+            }));
+            
+            // Add database PCAPs to the available options
+            availablePcaps.value = [...availablePcaps.value, ...dbPcaps];
+        }
     } catch (error) {
         console.error("Error loading PCAPs from database:", error);
     }

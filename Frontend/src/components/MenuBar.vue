@@ -111,6 +111,11 @@ const items = ref([
         route: "/pcap-table",
     },
     {
+        label: "Gespeicherte PCAPs",
+        icon: "pi pi-database",
+        route: "/saved-pcaps",
+    },
+    {
         label: "Erstellen",
         icon: "pi pi-plus",
         route: "/create-topology",
