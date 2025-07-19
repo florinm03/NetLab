@@ -4,6 +4,12 @@ import os
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+import sys
+import os
+# Add the parent directory to the path to import pcap_converter
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pcap_converter import convert_pcap_data_to_json
+from .pcap_parsing_service import PcapParsingService
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +19,13 @@ class PcapDatabaseService:
             'host': 'localhost',
             'port': 3307,
             'user': 'pcap_user',
-            'password': 'pcap_user_password', # TODO 
+            'password': 'pcap_user_password', # TODO env
             'database': 'pcap_db',
             'charset': 'utf8mb4',
             'autocommit': True
         }
         self.connection = None
+        self.pcap_parsing_service = PcapParsingService()
 
     def connect(self):
         """Establish database connection"""
@@ -67,12 +74,34 @@ class PcapDatabaseService:
             else:
                 file_size = metadata.get('file_size', 0)
             
-            # Insert into single pcap_files table with all data including PCAP file
+            # Convert PCAP data to JSON for analysis
+            pcap_json = None
+            if pcap_data:
+                logger.info("Converting PCAP data to JSON format...")
+                pcap_json = convert_pcap_data_to_json(pcap_data)
+                if pcap_json:
+                    logger.info("PCAP to JSON conversion successful")
+                else:
+                    logger.warning("PCAP to JSON conversion failed, continuing without JSON data")
+            
+            # Extract real connections from PCAP data
+            real_connections = []
+            if pcap_data:
+                logger.info("Extracting connections from PCAP data...")
+                real_connections = self.pcap_parsing_service.get_connections_for_graph(pcap_data)
+                if real_connections:
+                    logger.info(f"Successfully extracted {len(real_connections)} connections from PCAP data")
+                else:
+                    logger.warning("No connections found in PCAP data, using topology connections")
+                    # Fallback to topology connections if no real connections found
+                    real_connections = connections
+            
+            # Insert into single pcap_files table with all data including PCAP file and JSON
             insert_query = """
                 INSERT INTO pcap_files 
-                (creator, filename, file_path, pcap_data, file_size, topology_name, topology_type, 
+                (creator, filename, file_path, pcap_data, pcap_json, file_size, topology_name, topology_type, 
                  node_count, capture_duration, metadata_json, connections_json, connection_count)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             cursor.execute(insert_query, (
@@ -80,14 +109,15 @@ class PcapDatabaseService:
                 os.path.basename(file_path) if file_path else f"pcap_{creator}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pcap",
                 "database_stored",  # Indicate file is stored in database
                 pcap_data,
+                pcap_json,
                 file_size,
                 topology_info.get('name', 'Unknown'),
                 topology_info.get('type', 'unknown'),
                 topology_info.get('node_count', 0),
                 topology_info.get('capture_duration', 0),
                 json.dumps(metadata),
-                json.dumps(connections),
-                len(connections)
+                json.dumps(real_connections),
+                len(real_connections)
             ))
             
             pcap_id = cursor.lastrowid
@@ -218,7 +248,34 @@ class PcapDatabaseService:
         finally:
             self.disconnect()
 
+    def get_pcap_json_by_id(self, pcap_id: int) -> Optional[str]:
+        """
+        Get PCAP JSON data by ID (separate method to avoid memory issues)
+        
+        Args:
+            pcap_id: PCAP file ID
+            
+        Returns:
+            JSON string or None
+        """
+        try:
+            if not self.connect():
+                return None
 
+            cursor = self.connection.cursor(dictionary=True)
+            
+            query = "SELECT pcap_json FROM pcap_files WHERE id = %s"
+            cursor.execute(query, (pcap_id,))
+            result = cursor.fetchone()
+            
+            cursor.close()
+            return result['pcap_json'] if result else None
+            
+        except mysql.connector.Error as e:
+            logger.error(f"Database error: {e}")
+            return None
+        finally:
+            self.disconnect()
 
     def get_pcap_statistics(self, creator: str) -> Dict:
         """

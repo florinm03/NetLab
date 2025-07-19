@@ -13,6 +13,9 @@ COPY init.sql /docker-entrypoint-initdb.d/
 RUN mkdir -p /pcap_storage && \
     chown -R mysql:mysql /pcap_storage
 
+# Copy MySQL configuration
+COPY my.cnf /etc/mysql/conf.d/my.cnf
+
 # Expose MySQL port
 EXPOSE 3306
 

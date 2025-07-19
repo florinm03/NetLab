@@ -41,10 +41,15 @@
                             placeholder="Verbindungs-Demo auswählen"
                             class="pcap-dropdown"
                             @change="loadSelectedDemo"
+                            :loading="loading"
                         >
                             <template #option="slotProps">
                                 <div class="pcap-option">
-                                    <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                    <div class="pcap-header">
+                                        <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                        <span v-if="slotProps.option.type === 'saved'" class="pcap-badge">Gespeichert</span>
+                                        <span v-else class="pcap-badge demo">Demo</span>
+                                    </div>
                                     <span class="pcap-description">{{ slotProps.option.description }}</span>
                                 </div>
                             </template>
@@ -135,7 +140,7 @@
                                 }}</span>
                             </div>
                             <span class="packet-count"
-                                >{{ conn.value }} Pakete</span
+                                >{{ conn.packets }} Pakete</span
                             >
                         </div>
                     </div>
@@ -181,423 +186,520 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import * as d3 from "d3";
 import Dropdown from "primevue/dropdown";
+import { ref, computed, onMounted, onBeforeUnmount, inject } from "vue";
+import { useToast } from "primevue/usetoast";
 
-export default {
-    name: "EnhancedNetworkGraph",
-    components: { Dropdown },
-    data() {
-        return {
-            isAnimating: true,
-            showLabels: true,
-            showHighTraffic: false,
-            selectedNode: null,
-            simulation: null,
-            nodes: [],
-            links: [],
-            // Dropdown for connection demos
-            availableDemos: [
-                {
-                    name: "Mesh Demo",
-                    path: "/src/pcap_demos/connections/mesh_connections.json",
-                    description: "Mesh-Topologie Demo Verbindungsdaten"
-                },
-                {
-                    name: "Ring Demo",
-                    path: "/src/pcap_demos/connections/ring_connections.json",
-                    description: "Ring-Topologie Demo Verbindungsdaten"
-                },
-                {
-                    name: "Star Demo",
-                    path: "/src/pcap_demos/connections/star_connections.json",
-                    description: "Stern-Topologie Demo Verbindungsdaten"
-                },
-                {
-                    name: "Tree Demo",
-                    path: "/src/pcap_demos/connections/tree_connections.json",
-                    description: "Baum-Topologie Demo Verbindungsdaten"
-                },
-            ],
-            selectedDemo: "/src/pcap_demos/connections/mesh_connections.json",
-            rawData: [],
-        };
+const apiClient = inject('axios');
+const toast = useToast();
+
+// Reactive data
+const isAnimating = ref(true);
+const showLabels = ref(true);
+const showHighTraffic = ref(false);
+const selectedNode = ref(null);
+const simulation = ref(null);
+const nodes = ref([]);
+const links = ref([]);
+const loading = ref(false);
+const selectedDemo = ref("/src/pcap_demos/connections/mesh_connections.json");
+const rawData = ref([]);
+
+// Dropdown for connection demos and database data
+const availableDemos = ref([
+    {
+        name: "Mesh Demo",
+        path: "/src/pcap_demos/connections/mesh_connections.json",
+        description: "Mesh-Topologie Demo Verbindungsdaten",
+        type: "demo"
     },
-    computed: {
-        totalNodes() {
-            return this.nodes.length;
-        },
-        totalConnections() {
-            return this.links.length;
-        },
-        totalPackets() {
-            return this.rawData.reduce((sum, d) => sum + d.packets, 0);
-        },
-        topConnections() {
-            return this.rawData
-                .sort((a, b) => b.packets - a.packets)
-                .slice(0, 5);
-        },
-        topNodes() {
-            return this.nodes.sort((a, b) => b.total - a.total).slice(0, 5);
-        },
+    {
+        name: "Ring Demo",
+        path: "/src/pcap_demos/connections/ring_connections.json",
+        description: "Ring-Topologie Demo Verbindungsdaten",
+        type: "demo"
     },
-    mounted() {
-        this.loadSelectedDemo();
-        window.addEventListener("resize", this.handleResize);
+    {
+        name: "Star Demo",
+        path: "/src/pcap_demos/connections/star_connections.json",
+        description: "Stern-Topologie Demo Verbindungsdaten",
+        type: "demo"
     },
-    beforeUnmount() {
-        d3.select("body").selectAll(".tooltip").remove();
-        window.removeEventListener("resize", this.handleResize);
-        if (this.simulation) {
-            this.simulation.stop();
+    {
+        name: "Tree Demo",
+        path: "/src/pcap_demos/connections/tree_connections.json",
+        description: "Baum-Topologie Demo Verbindungsdaten",
+        type: "demo"
+    },
+]);
+
+// Template refs
+const svgRef = ref(null);
+const linkElements = ref(null);
+const nodeElements = ref(null);
+const labelElements = ref(null);
+const tooltip = ref(null);
+
+// Computed properties
+const totalNodes = computed(() => nodes.value.length);
+const totalConnections = computed(() => links.value.length);
+const totalPackets = computed(() => rawData.value.reduce((sum, d) => sum + d.packets, 0));
+const topConnections = computed(() => {
+    return rawData.value
+        .sort((a, b) => b.packets - a.packets)
+        .slice(0, 5);
+});
+const topNodes = computed(() => {
+    return nodes.value.sort((a, b) => b.total - a.total).slice(0, 5);
+});
+
+// Methods
+const loadSelectedDemo = async () => {
+    loading.value = true;
+    try {
+        // Check if this is a database PCAP (API endpoint)
+        const isDatabasePcap = selectedDemo.value.startsWith('/pcap/');
+        
+                        if (isDatabasePcap) {
+                    // For database PCAPs, get the connections data
+                    const pcapId = selectedDemo.value.split('/').pop(); 
+                    const response = await apiClient.get(`/pcap/${pcapId}/connections`);
+                    
+                    if (response.data.status === 'success') {
+                        // The connections are already in the correct format for the graph
+                        rawData.value = response.data.connections;
+                    } else {
+                        throw new Error(response.data.message || 'Failed to load PCAP connections data');
+                    }
+        } else {
+            // Regular JSON demo files
+            const resp = await fetch(selectedDemo.value);
+            if (!resp.ok) throw new Error("Fehler beim Laden der Verbindungsdaten");
+            const data = await resp.json();
+            rawData.value = data;
         }
-    },
-    methods: {
-        async loadSelectedDemo() {
-            try {
-                const resp = await fetch(this.selectedDemo);
-                if (!resp.ok) throw new Error("Fehler beim Laden der Verbindungsdaten");
-                const data = await resp.json();
-                this.rawData = data;
-                this.processData();
-                this.initGraph();
-            } catch (e) {
-                console.error("Fehler beim Laden der Verbindungsdemo:", e);
-                this.rawData = [];
-                this.processData();
-            }
-        },
-        initGraph() {
-
-            // Clear previous visualization
-            const svg = d3.select(this.$refs.svgRef);
-            svg.selectAll("*").remove();
-
-            // Setup dimensions
-            const containerWidth = this.$refs.svgRef.parentElement.clientWidth;
-            const width = Math.min(containerWidth - 40, 900);
-            const height = 600;
-
-            svg.attr("width", width)
-                .attr("height", height)
-                .attr("viewBox", [0, 0, width, height]);
-
-            // Create container group
-            const g = svg.append("g");
-
-            // Add zoom behavior
-            const zoom = d3
-                .zoom()
-                .scaleExtent([0.5, 3])
-                .on("zoom", (event) => {
-                    g.attr("transform", event.transform);
-                });
-
-            svg.call(zoom);
-
-            // Create tooltip
-            this.createTooltip();
-
-            // Create force simulation
-            this.simulation = d3
-                .forceSimulation(this.nodes)
-                .force(
-                    "link",
-                    d3
-                        .forceLink(this.links)
-                        .id((d) => d.id)
-                        .distance((d) => this.getLinkDistance(d)),
-                )
-                .force(
-                    "charge",
-                    d3.forceManyBody().strength((d) => this.getNodeCharge(d)),
-                )
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .force(
-                    "collision",
-                    d3.forceCollide().radius((d) => this.getNodeRadius(d) + 10),
-                );
-
-            // Create arrow markers
-            this.createArrowMarkers(svg);
-
-            // Draw links
-            this.linkElements = g
-                .append("g")
-                .attr("class", "links")
-                .selectAll("line")
-                .data(this.links)
-                .join("line")
-                .attr("class", "link")
-                .attr("stroke", (d) => this.getLinkColor(d))
-                .attr("stroke-width", (d) => this.getLinkWidth(d))
-                .attr("stroke-opacity", 0.8)
-                .attr("marker-end", "url(#arrowhead)")
-                .on("mouseover", (event, d) => this.showLinkTooltip(event, d))
-                .on("mouseout", () => this.hideTooltip());
-
-            // Draw nodes
-            this.nodeElements = g
-                .append("g")
-                .attr("class", "nodes")
-                .selectAll("circle")
-                .data(this.nodes)
-                .join("circle")
-                .attr("class", "node")
-                .attr("r", (d) => this.getNodeRadius(d))
-                .attr("fill", (d) => this.getNodeColor(d))
-                .attr("stroke", "#fff")
-                .attr("stroke-width", 2)
-                .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
-                .on("mouseover", (event, d) => this.showNodeTooltip(event, d))
-                .on("mouseout", () => this.hideTooltip())
-                .on("click", (event, d) => this.selectNode(d))
-                .call(
-                    d3
-                        .drag()
-                        .on("start", (event, d) => this.dragStarted(event, d))
-                        .on("drag", (event, d) => this.dragged(event, d))
-                        .on("end", (event, d) => this.dragEnded(event, d)),
-                );
-
-            // Add labels
-            this.labelElements = g
-                .append("g")
-                .attr("class", "labels")
-                .selectAll("text")
-                .data(this.nodes)
-                .join("text")
-                .attr("class", "label")
-                .attr("text-anchor", "middle")
-                .attr("dy", (d) => this.getNodeRadius(d) + 16)
-                .attr("font-size", "11px")
-                .attr("font-weight", "500")
-                .attr("fill", "#374151")
-                .text((d) => d.id)
-                .style("pointer-events", "none")
-                .style("display", this.showLabels ? "block" : "none");
-
-            // Update positions on simulation tick
-            this.simulation.on("tick", () => {
-                this.linkElements
-                    .attr("x1", (d) => d.source.x)
-                    .attr("y1", (d) => d.source.y)
-                    .attr("x2", (d) => d.target.x)
-                    .attr("y2", (d) => d.target.y);
-
-                this.nodeElements.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-
-                this.labelElements.attr("x", (d) => d.x).attr("y", (d) => d.y);
-            });
-        },
-
-        processData() {
-            // Filter data
-            let filteredData = this.rawData;
-
-            if (this.showHighTraffic) {
-                filteredData = filteredData.filter((d) => d.packets > 20);
-            }
-
-            // Extract unique nodes
-            const nodeIds = new Set([
-                ...filteredData.map((d) => d.source),
-                ...filteredData.map((d) => d.destination),
-            ]);
-
-            this.nodes = Array.from(nodeIds).map((id) => ({ id }));
-
-            // Calculate totals for each node
-            const nodeTotals = {};
-            filteredData.forEach((d) => {
-                nodeTotals[d.source] = (nodeTotals[d.source] || 0) + d.packets;
-                nodeTotals[d.destination] =
-                    (nodeTotals[d.destination] || 0) + d.packets;
-            });
-
-            this.nodes.forEach((node) => {
-                node.total = nodeTotals[node.id] || 0;
-            });
-
-            // Create links
-            this.links = filteredData.map((d) => ({
-                source: d.source,
-                target: d.destination,
-                value: d.packets,
-            }));
-        },
-
-        createTooltip() {
-            this.tooltip = d3
-                .select("body")
-                .append("div")
-                .attr("class", "modern-tooltip")
-                .style("position", "absolute")
-                .style("visibility", "hidden")
-                .style("background", "rgba(0, 0, 0, 0.9)")
-                .style("color", "white")
-                .style("padding", "12px 16px")
-                .style("border-radius", "8px")
-                .style("font-size", "13px")
-                .style("font-weight", "500")
-                .style("pointer-events", "none")
-                .style("box-shadow", "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
-                .style("z-index", "1000");
-        },
-
-        createArrowMarkers(svg) {
-            const defs = svg.append("defs");
-
-            defs.append("marker")
-                .attr("id", "arrowhead")
-                .attr("viewBox", "0 -5 10 10")
-                .attr("refX", 8)
-                .attr("refY", 0)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto")
-                .append("path")
-                .attr("d", "M0,-5L10,0L0,5")
-                .attr("fill", "#6b7280");
-        },
-
-        getNodeRadius(d) {
-            return Math.max(8, Math.sqrt(d.total) * 0.8 + 4);
-        },
-
-        getNodeColor(d) {
-            if (d.id.startsWith("224.")) {
-                return "#f59e0b"; // Multicast - amber
-            }
-            return "#6366f1"; // Regular - indigo
-        },
-
-        getNodeCharge(d) {
-            return d.id.startsWith("224.") ? -800 : -400;
-        },
-
-        getLinkDistance(d) {
-            return d.value > 50 ? 80 : 120;
-        },
-
-        getLinkWidth(d) {
-            return Math.max(1, Math.sqrt(d.value) * 0.3);
-        },
-
-        getLinkColor(d) {
-            if (d.value > 50) return "#dc2626"; // High traffic - red
-            if (d.value > 20) return "#f59e0b"; // Medium traffic - amber
-            return "#6b7280"; // Low traffic - gray
-        },
-
-        showNodeTooltip(event, d) {
-            this.tooltip.style("visibility", "visible").html(`
-                    <div><strong>${d.id}</strong></div>
-                    <div>Gesamte Pakete: ${d.total}</div>
-                    <div>Typ: ${d.id.startsWith("224.") ? "Multicast" : "Standard"}</div>
-                `);
-            this.moveTooltip(event);
-        },
-
-        showLinkTooltip(event, d) {
-            this.tooltip.style("visibility", "visible").html(`
-                    <div><strong>Verbindung</strong></div>
-                    <div>Von: ${d.source.id}</div>
-                    <div>Zu: ${d.target.id}</div>
-                    <div>Pakete: ${d.value}</div>
-                `);
-            this.moveTooltip(event);
-        },
-
-        hideTooltip() {
-            this.tooltip.style("visibility", "hidden");
-        },
-
-        moveTooltip(event) {
-            this.tooltip
-                .style("top", event.pageY - 10 + "px")
-                .style("left", event.pageX + 10 + "px");
-        },
-
-        selectNode(d) {
-            this.selectedNode = d;
-
-            // Highlight connected links
-            this.linkElements
-                .attr("stroke-opacity", (link) =>
-                    link.source.id === d.id || link.target.id === d.id
-                        ? 1
-                        : 0.3,
-                )
-                .attr("stroke-width", (link) =>
-                    link.source.id === d.id || link.target.id === d.id
-                        ? this.getLinkWidth(link) + 1
-                        : this.getLinkWidth(link),
-                );
-
-            // Highlight connected nodes
-            this.nodeElements
-                .attr("stroke", (node) => (node.id === d.id ? "#000" : "#fff"))
-                .attr("stroke-width", (node) => (node.id === d.id ? 3 : 2));
-        },
-
-        resetLayout() {
-            if (this.simulation) {
-                this.simulation.alpha(1).restart();
-            }
-        },
-
-        centerGraph() {
-            const svg = d3.select(this.$refs.svgRef);
-
-            svg.transition()
-                .duration(750)
-                .call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity.translate(0, 0).scale(1),
-                );
-        },
-
-        updateVisualization() {
-            this.initGraph();
-        },
-
-        updateLabels() {
-            if (this.labelElements) {
-                this.labelElements.style(
-                    "display",
-                    this.showLabels ? "block" : "none",
-                );
-            }
-        },
-
-        handleResize() {
-            clearTimeout(this.resizeTimeout);
-            this.resizeTimeout = setTimeout(() => {
-                this.initGraph();
-            }, 300);
-        },
-
-        dragStarted(event, d) {
-            if (!event.active) this.simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        },
-
-        dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        },
-
-        dragEnded(event, d) {
-            if (!event.active) this.simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        },
-    },
+        
+        processData();
+        initGraph();
+        
+        toast.add({
+            severity: "success",
+            summary: "Verbindungsdaten geladen",
+            detail: `${rawData.value.length} Verbindungen erfolgreich geladen.`,
+            life: 3000,
+        });
+    } catch (e) {
+        console.error("Fehler beim Laden der Verbindungsdaten:", e);
+        rawData.value = [];
+        processData();
+        
+        toast.add({
+            severity: "error",
+            summary: "Fehler",
+            detail: "Verbindungsdaten konnten nicht geladen werden.",
+            life: 5000,
+        });
+    } finally {
+        loading.value = false;
+    }
 };
+
+
+
+// Load PCAPs from database
+const loadPcapsFromDatabase = async () => {
+    try {
+        // Get user ID from store or localStorage
+        const userId = localStorage.getItem('userId') || 'guest';
+        
+        const response = await apiClient.get(`/pcaps/${userId}`);
+        const result = response.data;
+        
+        if (result.status === 'success' && result.pcaps) {
+            // Convert database PCAPs to the format expected by the dropdown
+            const dbPcaps = result.pcaps.map(pcap => {
+                const createdDate = pcap.created_at ? new Date(pcap.created_at) : new Date();
+                const formattedDate = createdDate.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return {
+                    name: pcap.topology_name || pcap.filename,
+                    path: `/pcap/${pcap.id}`,
+                    description: `Erstellt am ${formattedDate} - ${pcap.topology_type} Topologie mit ${pcap.node_count} Knoten`,
+                    type: "saved",
+                    isDatabase: true,
+                    pcapId: pcap.id,
+                    metadata: pcap.metadata_json ? JSON.parse(pcap.metadata_json) : null,
+                    created_at: pcap.created_at,
+                    hasConnectionsData: !!pcap.connections_json
+                };
+            });
+            
+            // Add database PCAPs to the available options
+            availableDemos.value = [...availableDemos.value, ...dbPcaps];
+        }
+    } catch (error) {
+        console.error("Error loading PCAPs from database:", error);
+    }
+};
+
+const initGraph = () => {
+    // Clear previous visualization
+    const svg = d3.select(svgRef.value);
+    svg.selectAll("*").remove();
+
+    // Setup dimensions
+    const containerWidth = svgRef.value.parentElement.clientWidth;
+    const width = Math.min(containerWidth - 40, 900);
+    const height = 600;
+
+    svg.attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", [0, 0, width, height]);
+
+    // Create container group
+    const g = svg.append("g");
+
+    // Add zoom behavior
+    const zoom = d3
+        .zoom()
+        .scaleExtent([0.5, 3])
+        .on("zoom", (event) => {
+            g.attr("transform", event.transform);
+        });
+
+    svg.call(zoom);
+
+    // Create tooltip
+    createTooltip();
+
+    // Create force simulation
+    simulation.value = d3
+        .forceSimulation(nodes.value)
+        .force(
+            "link",
+            d3
+                .forceLink(links.value)
+                .id((d) => d.id)
+                .distance((d) => getLinkDistance(d)),
+        )
+        .force(
+            "charge",
+            d3.forceManyBody().strength((d) => getNodeCharge(d)),
+        )
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force(
+            "collision",
+            d3.forceCollide().radius((d) => getNodeRadius(d) + 10),
+        );
+
+    // Create arrow markers
+    createArrowMarkers(svg);
+
+    // Draw links
+    linkElements.value = g
+        .append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(links.value)
+        .join("line")
+        .attr("class", "link")
+        .attr("stroke", (d) => getLinkColor(d))
+        .attr("stroke-width", (d) => getLinkWidth(d))
+        .attr("stroke-opacity", 0.8)
+        .attr("marker-end", "url(#arrowhead)")
+        .on("mouseover", (event, d) => showLinkTooltip(event, d))
+        .on("mouseout", () => hideTooltip());
+
+    // Draw nodes
+    nodeElements.value = g
+        .append("g")
+        .attr("class", "nodes")
+        .selectAll("circle")
+        .data(nodes.value)
+        .join("circle")
+        .attr("class", "node")
+        .attr("r", (d) => getNodeRadius(d))
+        .attr("fill", (d) => getNodeColor(d))
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 2)
+        .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+        .on("mouseover", (event, d) => showNodeTooltip(event, d))
+        .on("mouseout", () => hideTooltip())
+        .on("click", (event, d) => selectNode(d))
+        .call(
+            d3
+                .drag()
+                .on("start", (event, d) => dragStarted(event, d))
+                .on("drag", (event, d) => dragged(event, d))
+                .on("end", (event, d) => dragEnded(event, d)),
+        );
+
+    // Add labels
+    labelElements.value = g
+        .append("g")
+        .attr("class", "labels")
+        .selectAll("text")
+        .data(nodes.value)
+        .join("text")
+        .attr("class", "label")
+        .attr("text-anchor", "middle")
+        .attr("dy", (d) => getNodeRadius(d) + 16)
+        .attr("font-size", "11px")
+        .attr("font-weight", "500")
+        .attr("fill", "#374151")
+        .text((d) => d.id)
+        .style("pointer-events", "none")
+        .style("display", showLabels.value ? "block" : "none");
+
+    // Update positions on simulation tick
+    simulation.value.on("tick", () => {
+        linkElements.value
+            .attr("x1", (d) => d.source.x)
+            .attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x)
+            .attr("y2", (d) => d.target.y);
+
+        nodeElements.value.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+
+        labelElements.value.attr("x", (d) => d.x).attr("y", (d) => d.y);
+    });
+};
+
+const processData = () => {
+    // Filter data
+    let filteredData = rawData.value;
+
+    if (showHighTraffic.value) {
+        filteredData = filteredData.filter((d) => d.packets > 20);
+    }
+
+    // Extract unique nodes
+    const nodeIds = new Set([
+        ...filteredData.map((d) => d.source),
+        ...filteredData.map((d) => d.destination),
+    ]);
+
+    nodes.value = Array.from(nodeIds).map((id) => ({ id }));
+
+    // Calculate totals for each node
+    const nodeTotals = {};
+    filteredData.forEach((d) => {
+        nodeTotals[d.source] = (nodeTotals[d.source] || 0) + d.packets;
+        nodeTotals[d.destination] =
+            (nodeTotals[d.destination] || 0) + d.packets;
+    });
+
+    nodes.value.forEach((node) => {
+        node.total = nodeTotals[node.id] || 0;
+    });
+
+    // Create links
+    links.value = filteredData.map((d) => ({
+        source: d.source,
+        target: d.destination,
+        value: d.packets,
+    }));
+};
+
+const createTooltip = () => {
+    tooltip.value = d3
+        .select("body")
+        .append("div")
+        .attr("class", "modern-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "rgba(0, 0, 0, 0.9)")
+        .style("color", "white")
+        .style("padding", "12px 16px")
+        .style("border-radius", "8px")
+        .style("font-size", "13px")
+        .style("font-weight", "500")
+        .style("pointer-events", "none")
+        .style("box-shadow", "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
+        .style("z-index", "1000");
+};
+
+const createArrowMarkers = (svg) => {
+    const defs = svg.append("defs");
+
+    defs.append("marker")
+        .attr("id", "arrowhead")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 8)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#6b7280");
+};
+
+const getNodeRadius = (d) => {
+    return Math.max(8, Math.sqrt(d.total) * 0.8 + 4);
+};
+
+const getNodeColor = (d) => {
+    if (d.id.startsWith("224.")) {
+        return "#f59e0b"; // Multicast - amber
+    }
+    return "#6366f1"; // Regular - indigo
+};
+
+const getNodeCharge = (d) => {
+    return d.id.startsWith("224.") ? -800 : -400;
+};
+
+const getLinkDistance = (d) => {
+    return d.value > 50 ? 80 : 120;
+};
+
+const getLinkWidth = (d) => {
+    return Math.max(1, Math.sqrt(d.value) * 0.3);
+};
+
+const getLinkColor = (d) => {
+    if (d.value > 50) return "#dc2626"; // High traffic - red
+    if (d.value > 20) return "#f59e0b"; // Medium traffic - amber
+    return "#6b7280"; // Low traffic - gray
+};
+
+const showNodeTooltip = (event, d) => {
+    tooltip.value.style("visibility", "visible").html(`
+            <div><strong>${d.id}</strong></div>
+            <div>Gesamte Pakete: ${d.total}</div>
+            <div>Typ: ${d.id.startsWith("224.") ? "Multicast" : "Standard"}</div>
+        `);
+    moveTooltip(event);
+};
+
+const showLinkTooltip = (event, d) => {
+    tooltip.value.style("visibility", "visible").html(`
+            <div><strong>Verbindung</strong></div>
+            <div>Von: ${d.source.id}</div>
+            <div>Zu: ${d.target.id}</div>
+            <div>Pakete: ${d.value}</div>
+        `);
+    moveTooltip(event);
+};
+
+const hideTooltip = () => {
+    tooltip.value.style("visibility", "hidden");
+};
+
+const moveTooltip = (event) => {
+    tooltip.value
+        .style("top", event.pageY - 10 + "px")
+        .style("left", event.pageX + 10 + "px");
+};
+
+const selectNode = (d) => {
+    selectedNode.value = d;
+
+    // Highlight connected links
+    linkElements.value
+        .attr("stroke-opacity", (link) =>
+            link.source.id === d.id || link.target.id === d.id
+                ? 1
+                : 0.3,
+        )
+        .attr("stroke-width", (link) =>
+            link.source.id === d.id || link.target.id === d.id
+                ? getLinkWidth(link) + 1
+                : getLinkWidth(link),
+        );
+
+    // Highlight connected nodes
+    nodeElements.value
+        .attr("stroke", (node) => (node.id === d.id ? "#000" : "#fff"))
+        .attr("stroke-width", (node) => (node.id === d.id ? 3 : 2));
+};
+
+const resetLayout = () => {
+    if (simulation.value) {
+        simulation.value.alpha(1).restart();
+    }
+};
+
+const centerGraph = () => {
+    const svg = d3.select(svgRef.value);
+
+    svg.transition()
+        .duration(750)
+        .call(
+            d3.zoom().transform,
+            d3.zoomIdentity.translate(0, 0).scale(1),
+        );
+};
+
+const updateVisualization = () => {
+    initGraph();
+};
+
+const updateLabels = () => {
+    if (labelElements.value) {
+        labelElements.value.style(
+            "display",
+            showLabels.value ? "block" : "none",
+        );
+    }
+};
+
+const handleResize = () => {
+    clearTimeout(resizeTimeout.value);
+    resizeTimeout.value = setTimeout(() => {
+        initGraph();
+    }, 300);
+};
+
+const dragStarted = (event, d) => {
+    if (!event.active) simulation.value.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+};
+
+const dragged = (event, d) => {
+    d.fx = event.x;
+    d.fy = event.y;
+};
+
+const dragEnded = (event, d) => {
+    if (!event.active) simulation.value.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+};
+
+// Lifecycle hooks
+onMounted(async () => {
+    await loadPcapsFromDatabase();
+    
+    // Set default selection to first available demo
+    if (availableDemos.value.length > 0) {
+        selectedDemo.value = availableDemos.value[0].path;
+    }
+    
+    await loadSelectedDemo();
+    window.addEventListener("resize", handleResize);
+});
+
+onBeforeUnmount(() => {
+    d3.select("body").selectAll(".tooltip").remove();
+    window.removeEventListener("resize", handleResize);
+    if (simulation.value) {
+        simulation.value.stop();
+    }
+});
+
+// Resize timeout
+const resizeTimeout = ref(null);
 </script>
 
 <style scoped>
@@ -689,14 +791,39 @@ export default {
     gap: 0.25rem;
 }
 
+.pcap-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .pcap-name {
     font-weight: 600;
     color: var(--nlb-text-primary);
 }
 
+.pcap-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--nlb-text-light);
+    background-color: var(--nlb-primary);
+}
+
+.pcap-badge.demo {
+    background-color: var(--nlb-warning);
+}
+
 .pcap-description {
     font-size: 0.8rem;
     color: var(--nlb-text-secondary);
+}
+
+/* Loading state for dropdown */
+.pcap-dropdown :deep(.p-dropdown.p-component.p-disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .header-stats {

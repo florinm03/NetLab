@@ -548,7 +548,6 @@
                                                 class="terminal-iframe"
                                                 :title="`Container Terminal ${getNodeDisplayName(node.name, index)}`"
                                                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                                                @load="onIframeLoad"
                                                 @error="onIframeError"
                                             ></iframe>
                                         </div>
@@ -1118,19 +1117,19 @@ export default {
         },
 
         getNodeConnections(node, index) {
-            console.log(`Getting connections for node: ${node.name} (index: ${index})`);
-            console.log('All graph connections:', this.graphConnections);
+            // console.log(`Getting connections for node: ${node.name} (index: ${index})`);
+            // console.log('All graph connections:', this.graphConnections);
             
             const connections = this.graphConnections.filter(conn => {
                 const isSource = conn.source === node.name;
                 const isTarget = conn.target === node.name;
                 
-                console.log(`Connection ${conn.source} -> ${conn.target}: isSource=${isSource}, isTarget=${isTarget}`);
+                // console.log(`Connection ${conn.source} -> ${conn.target}: isSource=${isSource}, isTarget=${isTarget}`);
                 
                 return isSource || isTarget;
             });
             
-            console.log('Filtered connections for node:', connections);
+            // console.log('Filtered connections for node:', connections);
             
             const result = connections.map(conn => {
                 const isSource = conn.source === node.name;
@@ -1141,7 +1140,7 @@ export default {
                 };
             });
             
-            console.log('Final connections for node:', result);
+            // console.log('Final connections for node:', result);
             return result;
         },
 
@@ -1182,7 +1181,7 @@ export default {
 
         openNodeTerminal(node) {
             if (node.url) {
-                console.log(`Opening terminal for node: ${node.name}`, node.url);
+                // console.log(`Opening terminal for node: ${node.name}`, node.url);
                 window.open(node.url, '_blank');
             } else {
                 console.error(`No terminal URL found for node: ${node.name}`);
@@ -1243,10 +1242,6 @@ export default {
             });
         },
 
-        onIframeLoad(event) {
-            console.log('Iframe loaded successfully:', event);
-        },
-
         onIframeError(event) {
             console.error('Iframe failed to load:', event);
             this.toast.add({
@@ -1258,6 +1253,7 @@ export default {
         },
 
         determineTopologyType() {
+            // this.selectedTopology
             const nodeCount = this.ownNodes.length;
             
             console.log('Determining topology type for', nodeCount, 'nodes');
@@ -1305,8 +1301,8 @@ export default {
                 this.pcapDownloadStatus = null;
                 
                 const userId = this.userId;
-                console.log("--------------------------------");
-                console.log('Downloading PCAP for user:', userId);
+                // console.log("--------------------------------");
+                // console.log('Downloading PCAP for user:', userId);
                 const response = await this.$axios.get(`/download-pcap/${userId}`, {
                     responseType: 'blob'
                 });
@@ -1382,8 +1378,8 @@ export default {
                 this.pcapDownloadStatus = null;
                 
                 const userId = this.userId;
-                console.log("--------------------------------");
-                console.log('Saving PCAP to database for user:', userId);
+                // console.log("--------------------------------");
+                // console.log('Saving PCAP to database for user:', userId);
                 
                 // Prepare topology info
                 const topologyInfo = {

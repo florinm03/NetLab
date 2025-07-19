@@ -48,6 +48,7 @@ class TopologyService:
                 }
 
             # Construct the file path
+            print(f"name:  {topology_name}")
             topology_script = f"../../topologies_by_userid/{topology_name}_by_user.py"
             
             # Check if the topology script file exists

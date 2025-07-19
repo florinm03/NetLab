@@ -45,7 +45,11 @@
                     >
                         <template #option="slotProps">
                             <div class="pcap-option">
-                                <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                <div class="pcap-header">
+                                    <span class="pcap-name">{{ slotProps.option.name }}</span>
+                                    <span v-if="slotProps.option.type === 'saved'" class="pcap-badge">Gespeichert</span>
+                                    <span v-else class="pcap-badge demo">Demo</span>
+                                </div>
                                 <span class="pcap-description">{{ slotProps.option.description }}</span>
                             </div>
                         </template>
@@ -215,11 +219,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, inject } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Dropdown from "primevue/dropdown";
 import { useToast } from "primevue/usetoast";
+
+const apiClient = inject('axios');
 
 const toast = useToast();
 const packets = ref([]);
@@ -235,22 +241,26 @@ const availablePcaps = ref([
     {
         name: "Mesh Demo",
         path: "/src/pcap_demos/json/mesh.json",
-        description: "Mesh-Topologie Demo PCAP-Datei"
+        description: "Mesh-Topologie Demo PCAP-Datei",
+        type: "demo"
     },
     {
         name: "Ring Demo",
         path: "/src/pcap_demos/json/ring.json",
-        description: "Ring-Topologie Demo PCAP-Datei"
+        description: "Ring-Topologie Demo PCAP-Datei",
+        type: "demo"
     },
     {
         name: "Star Demo",
         path: "/src/pcap_demos/json/star.json",
-        description: "Stern-Topologie Demo PCAP-Datei"
+        description: "Stern-Topologie Demo PCAP-Datei",
+        type: "demo"
     },
     {
         name: "Tree Demo",
         path: "/src/pcap_demos/json/tree.json",
-        description: "Baum-Topologie Demo PCAP-Datei"
+        description: "Baum-Topologie Demo PCAP-Datei",
+        type: "demo"
     }
 ]);
 
@@ -374,27 +384,55 @@ const loadPcapData = async (filePath) => {
     loading.value = true;
     try {
         // Check if this is a database PCAP (API endpoint)
-        const isDatabasePcap = filePath.startsWith('/api/pcap/');
+        const isDatabasePcap = filePath.startsWith('/pcap/');
         
         let resp;
         if (isDatabasePcap) {
-            // For database PCAPs, we need to handle binary data differently
-            resp = await fetch(filePath);
-            if (!resp.ok) {
-                throw new Error(
-                    `Failed to fetch PCAP from database: ${resp.status} ${resp.statusText}`,
-                );
+            // For database PCAPs, get the JSON data
+            const pcapId = filePath.split('/')[2]; // Get ID from /pcap/{id}/download
+            const jsonResponse = await apiClient.get(`/pcap/${pcapId}/json`);
+            
+            if (jsonResponse.data.status === 'success') {
+                // Use the JSON data directly
+                const raw = jsonResponse.data.data;
+                
+                packets.value = raw.map((pkt) => {
+                    const frameNumber = pkt["frame.number"] || "";
+                    const relTime = pkt["frame.time_relative"] || "";
+                    const ipSrc = pkt["ip.src"] || pkt["ipv6.src"] || "";
+                    const ipDst = pkt["ip.dst"] || pkt["ipv6.dst"] || "";
+                    const frameProtocols = pkt["frame.protocols"] || "";
+                    const frameLen = pkt["frame.len"] || "";
+                    const wsColInfo = pkt["_ws.col.Info"] || pkt["_ws.col.info"] || "";
+
+                    const topProto = extractTopProtocol(frameProtocols);
+
+                    return {
+                        no: frameNumber,
+                        time: relTime,
+                        src: ipSrc,
+                        dst: ipDst,
+                        proto: topProto,
+                        len: frameLen,
+                        info: wsColInfo,
+                        raw: pkt,
+                    };
+                });
+
+                clearFilters();
+                resetPagination();
+
+                toast.add({
+                    severity: "success",
+                    summary: "PCAP geladen",
+                    detail: `${packets.value.length} Pakete erfolgreich geladen.`,
+                    life: 3000,
+                });
+                loading.value = false;
+                return;
+            } else {
+                throw new Error(jsonResponse.data.message || 'Failed to load PCAP JSON data');
             }
-            // For now, we'll show a message that binary PCAPs need to be converted
-            // In a real implementation, you'd need to convert PCAP to JSON format
-            toast.add({
-                severity: "info",
-                summary: "PCAP Format",
-                detail: "Gespeicherte PCAP-Dateien werden noch nicht unterstützt. Verwenden Sie die Demo-Dateien.",
-                life: 5000,
-            });
-            loading.value = false;
-            return;
         } else {
             // Regular JSON PCAP files
             resp = await fetch(filePath);
@@ -431,7 +469,6 @@ const loadPcapData = async (filePath) => {
             };
         });
 
-        // Reset filters and pagination when loading new data
         clearFilters();
         resetPagination();
 
@@ -467,19 +504,33 @@ const loadPcapsFromDatabase = async () => {
         // Get user ID from store or localStorage
         const userId = localStorage.getItem('userId') || 'guest';
         
-        const response = await fetch(`/api/pcaps/${userId}`);
-        const result = await response.json();
+        const response = await apiClient.get(`/pcaps/${userId}`);
+        const result = response.data;
         
         if (result.status === 'success' && result.pcaps) {
             // Convert database PCAPs to the format expected by the dropdown
-            const dbPcaps = result.pcaps.map(pcap => ({
-                name: `${pcap.topology_name} (${pcap.filename})`,
-                path: `/api/pcap/${pcap.id}/download`,
-                description: `Gespeicherte PCAP-Datei - ${pcap.topology_type} Topologie mit ${pcap.node_count} Knoten`,
-                isDatabase: true,
-                pcapId: pcap.id,
-                metadata: pcap.metadata_json ? JSON.parse(pcap.metadata_json) : null
-            }));
+            const dbPcaps = result.pcaps.map(pcap => {
+                const createdDate = pcap.created_at ? new Date(pcap.created_at) : new Date();
+                const formattedDate = createdDate.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return {
+                    name: pcap.topology_name || pcap.filename,
+                    path: `/pcap/${pcap.id}/download`,
+                    description: `Erstellt am ${formattedDate} - ${pcap.topology_type} Topologie mit ${pcap.node_count} Knoten`,
+                    type: "saved",
+                    isDatabase: true,
+                    pcapId: pcap.id,
+                    metadata: pcap.metadata_json ? JSON.parse(pcap.metadata_json) : null,
+                    created_at: pcap.created_at,
+                    hasJsonData: !!pcap.pcap_json
+                };
+            });
             
             // Add database PCAPs to the available options
             availablePcaps.value = [...availablePcaps.value, ...dbPcaps];
@@ -1093,6 +1144,45 @@ onMounted(async () => {
     100% {
         transform: rotate(360deg);
     }
+}
+
+/* PCAP Dropdown Styling */
+.pcap-option {
+    padding: 0.5rem 0;
+}
+
+.pcap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.pcap-name {
+    font-weight: 600;
+    color: var(--nlb-text-primary);
+    font-size: 0.9rem;
+}
+
+.pcap-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--nlb-primary);
+    color: var(--nlb-text-light);
+}
+
+.pcap-badge.demo {
+    background: var(--nlb-accent);
+    color: var(--nlb-text-light);
+}
+
+.pcap-description {
+    font-size: 0.8rem;
+    color: var(--nlb-text-secondary);
+    line-height: 1.3;
 }
 
 /* Responsive design */

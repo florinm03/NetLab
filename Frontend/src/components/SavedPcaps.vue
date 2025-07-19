@@ -162,7 +162,7 @@ export default {
             try {
                 const userId = this.$store.state.user.id || 'guest';
                 
-                const response = await this.$axios.delete(`/api/pcap/${pcapId}?user_id=${userId}`);
+                const response = await this.$axios.delete(`/pcap/${pcapId}?user_id=${userId}`);
                 
                 if (response.data.status === 'success') {
                     // Remove from local list

@@ -35,7 +35,7 @@ app.use(store);
 
 // Add Axios to Vue prototype and provide for Composition API
 app.config.globalProperties.$axios = apiClient;
-app.provide("axios", apiClient); // For Composition API usage
+app.provide("axios", apiClient);
 
 // PrimeVue setup
 app.use(PrimeVue, {

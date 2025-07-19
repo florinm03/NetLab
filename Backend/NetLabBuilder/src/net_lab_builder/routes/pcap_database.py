@@ -193,6 +193,72 @@ def download_pcap_from_db(pcap_id):
         logger.error(f"Failed to download PCAP {pcap_id}: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@pcap_db_bp.route('/pcap/<pcap_id>/json', methods=['GET'])
+def get_pcap_json(pcap_id):
+    """Get PCAP data in JSON format for analysis"""
+    try:
+        if not pcap_id:
+            return jsonify({'status': 'error', 'message': 'pcap_id required'}), 400
+
+        pcap = pcap_service.get_pcap_file_by_id(int(pcap_id), include_data=False)
+        
+        if not pcap:
+            return jsonify({'status': 'error', 'message': 'PCAP file not found'}), 404
+        
+        # Get JSON data separately to avoid memory issues
+        pcap_json = pcap_service.get_pcap_json_by_id(int(pcap_id))
+        
+        if not pcap_json:
+            return jsonify({'status': 'error', 'message': 'PCAP JSON data not found in database'}), 404
+        
+        # Parse and return the JSON data
+        try:
+            json_data = json.loads(pcap_json)
+            return jsonify({
+                'status': 'success',
+                'pcap_id': pcap_id,
+                'data': json_data
+            }), 200
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse PCAP JSON data: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Invalid JSON data in database'}), 500
+        
+    except Exception as e:
+        logger.error(f"Failed to get PCAP JSON {pcap_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@pcap_db_bp.route('/pcap/<pcap_id>/connections', methods=['GET'])
+def get_pcap_connections(pcap_id):
+    """Get PCAP connections data for graph visualization"""
+    try:
+        if not pcap_id:
+            return jsonify({'status': 'error', 'message': 'pcap_id required'}), 400
+
+        pcap = pcap_service.get_pcap_file_by_id(int(pcap_id), include_data=False)
+        
+        if not pcap:
+            return jsonify({'status': 'error', 'message': 'PCAP file not found'}), 404
+        
+        # Check if connections_json exists
+        if not pcap.get('connections_json'):
+            return jsonify({'status': 'error', 'message': 'PCAP connections data not found in database'}), 404
+        
+        # Parse and return the connections data
+        try:
+            connections_data = json.loads(pcap['connections_json'])
+            return jsonify({
+                'status': 'success',
+                'pcap_id': pcap_id,
+                'connections': connections_data
+            }), 200
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse PCAP connections data: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Invalid connections data in database'}), 500
+        
+    except Exception as e:
+        logger.error(f"Failed to get PCAP connections {pcap_id}: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @pcap_db_bp.route('/pcap/<pcap_id>', methods=['DELETE'])
 def delete_pcap(pcap_id):
     """Delete PCAP metadata from database"""

@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS pcap_files (
     creator VARCHAR(255) NOT NULL COMMENT 'User ID of the creator',
     filename VARCHAR(255) NOT NULL COMMENT 'Original filename',
     file_path VARCHAR(500) NOT NULL COMMENT 'Path to the .pcap file',
+    pcap_data LONGBLOB COMMENT 'Binary PCAP file data',
+    pcap_json JSON COMMENT 'JSON representation of PCAP data for analysis',
     file_size BIGINT COMMENT 'Size of the file in bytes',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
