@@ -74,6 +74,7 @@
                         <button
                             @click="
                                 showHighTraffic = !showHighTraffic;
+                                processData();
                                 updateVisualization();
                             "
                             :class="[
