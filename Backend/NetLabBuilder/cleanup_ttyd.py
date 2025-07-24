@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script to cleanup orphaned ttyd processes
 Run this script to kill all ttyd processes that may be consuming ports
@@ -32,12 +31,10 @@ def kill_ttyd_processes():
     for proc in ttyd_processes:
         print(f"  PID {proc.pid}: {' '.join(proc.cmdline())}")
     
-    # Kill all ttyd processes
     killed_count = 0
     for proc in ttyd_processes:
         try:
-            # Kill the entire process group
-            os.killpg(proc.pid, signal.SIGKILL)
+            os.killpg(proc.pid, signal.SIGKILL) # Process Group
             killed_count += 1
             print(f"Killed ttyd process {proc.pid}")
         except (OSError, psutil.NoSuchProcess):

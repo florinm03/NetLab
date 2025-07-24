@@ -14,7 +14,6 @@ class ContainerService:
             container_name = f"frr-NODE-{user_id}-{str(uuid.uuid4())[:8]}"
             logger.info(f"Creating container: {container_name}")
 
-            # Create the container
             container = self.client.containers.run(
                 'frrouting/frr:latest',
                 name=container_name,

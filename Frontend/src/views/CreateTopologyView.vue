@@ -348,8 +348,7 @@ if __name__ == "__main__":
             },
         ]);
 
-        // Carousel responsive options
-        const responsiveOptions = [
+        const responsiveOptions = [ 
             {
                 breakpoint: "1024px",
                 numVisible: 2,
@@ -362,7 +361,6 @@ if __name__ == "__main__":
             },
         ];
 
-        // Computed properties
         const canSubmit = computed(() => {
             return (
                 topologyName.value.trim() &&
@@ -372,7 +370,6 @@ if __name__ == "__main__":
             );
         });
 
-        // Methods
         const selectExample = (example) => {
             editorContent.value = example.code;
             topologyName.value = example.name;

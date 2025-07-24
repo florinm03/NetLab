@@ -195,7 +195,6 @@ import { useToast } from "primevue/usetoast";
 const apiClient = inject('axios');
 const toast = useToast();
 
-// Reactive data
 const isAnimating = ref(true);
 const showLabels = ref(true);
 const showHighTraffic = ref(false);
@@ -207,7 +206,6 @@ const loading = ref(false);
 const selectedDemo = ref("/src/pcap_demos/connections/mesh_connections.json");
 const rawData = ref([]);
 
-// Dropdown for connection demos and database data
 const availableDemos = ref([
     {
         name: "Mesh Demo",
@@ -235,14 +233,12 @@ const availableDemos = ref([
     },
 ]);
 
-// Template refs
 const svgRef = ref(null);
 const linkElements = ref(null);
 const nodeElements = ref(null);
 const labelElements = ref(null);
 const tooltip = ref(null);
 
-// Computed properties
 const totalNodes = computed(() => nodes.value.length);
 const totalConnections = computed(() => links.value.length);
 const totalPackets = computed(() => rawData.value.reduce((sum, d) => sum + d.packets, 0));
@@ -255,26 +251,22 @@ const topNodes = computed(() => {
     return nodes.value.sort((a, b) => b.total - a.total).slice(0, 5);
 });
 
-// Methods
 const loadSelectedDemo = async () => {
     loading.value = true;
     try {
-        // Check if this is a database PCAP (API endpoint)
         const isDatabasePcap = selectedDemo.value.startsWith('/pcap/');
         
                         if (isDatabasePcap) {
-                    // For database PCAPs, get the connections data
                     const pcapId = selectedDemo.value.split('/').pop(); 
                     const response = await apiClient.get(`/pcap/${pcapId}/connections`);
                     
                     if (response.data.status === 'success') {
-                        // The connections are already in the correct format for the graph
                         rawData.value = response.data.connections;
                     } else {
                         throw new Error(response.data.message || 'Failed to load PCAP connections data');
                     }
         } else {
-            // Regular JSON demo files
+            // JSON demo files
             const resp = await fetch(selectedDemo.value);
             if (!resp.ok) throw new Error("Fehler beim Laden der Verbindungsdaten");
             const data = await resp.json();
@@ -311,14 +303,12 @@ const loadSelectedDemo = async () => {
 // Load PCAPs from database
 const loadPcapsFromDatabase = async () => {
     try {
-        // Get user ID from store or localStorage
         const userId = localStorage.getItem('userId') || 'guest';
         
         const response = await apiClient.get(`/pcaps/${userId}`);
         const result = response.data;
         
         if (result.status === 'success' && result.pcaps) {
-            // Convert database PCAPs to the format expected by the dropdown
             const dbPcaps = result.pcaps.map(pcap => {
                 const createdDate = pcap.created_at ? new Date(pcap.created_at) : new Date();
                 const formattedDate = createdDate.toLocaleDateString('de-DE', {
@@ -342,7 +332,6 @@ const loadPcapsFromDatabase = async () => {
                 };
             });
             
-            // Add database PCAPs to the available options
             availableDemos.value = [...availableDemos.value, ...dbPcaps];
         }
     } catch (error) {
@@ -355,7 +344,6 @@ const initGraph = () => {
     const svg = d3.select(svgRef.value);
     svg.selectAll("*").remove();
 
-    // Setup dimensions
     const containerWidth = svgRef.value.parentElement.clientWidth;
     const width = Math.min(containerWidth - 40, 900);
     const height = 600;
@@ -364,10 +352,8 @@ const initGraph = () => {
         .attr("height", height)
         .attr("viewBox", [0, 0, width, height]);
 
-    // Create container group
     const g = svg.append("g");
 
-    // Add zoom behavior
     const zoom = d3
         .zoom()
         .scaleExtent([0.5, 3])
@@ -377,10 +363,8 @@ const initGraph = () => {
 
     svg.call(zoom);
 
-    // Create tooltip
     createTooltip();
 
-    // Create force simulation
     simulation.value = d3
         .forceSimulation(nodes.value)
         .force(
@@ -400,10 +384,8 @@ const initGraph = () => {
             d3.forceCollide().radius((d) => getNodeRadius(d) + 10),
         );
 
-    // Create arrow markers
     createArrowMarkers(svg);
 
-    // Draw links
     linkElements.value = g
         .append("g")
         .attr("class", "links")
@@ -418,7 +400,6 @@ const initGraph = () => {
         .on("mouseover", (event, d) => showLinkTooltip(event, d))
         .on("mouseout", () => hideTooltip());
 
-    // Draw nodes
     nodeElements.value = g
         .append("g")
         .attr("class", "nodes")
@@ -442,7 +423,6 @@ const initGraph = () => {
                 .on("end", (event, d) => dragEnded(event, d)),
         );
 
-    // Add labels
     labelElements.value = g
         .append("g")
         .attr("class", "labels")
@@ -459,7 +439,6 @@ const initGraph = () => {
         .style("pointer-events", "none")
         .style("display", showLabels.value ? "block" : "none");
 
-    // Update positions on simulation tick
     simulation.value.on("tick", () => {
         linkElements.value
             .attr("x1", (d) => d.source.x)
@@ -474,14 +453,12 @@ const initGraph = () => {
 };
 
 const processData = () => {
-    // Filter data
     let filteredData = rawData.value;
 
     if (showHighTraffic.value) {
         filteredData = filteredData.filter((d) => d.packets > 20);
     }
 
-    // Extract unique nodes
     const nodeIds = new Set([
         ...filteredData.map((d) => d.source),
         ...filteredData.map((d) => d.destination),
@@ -489,7 +466,6 @@ const processData = () => {
 
     nodes.value = Array.from(nodeIds).map((id) => ({ id }));
 
-    // Calculate totals for each node
     const nodeTotals = {};
     filteredData.forEach((d) => {
         nodeTotals[d.source] = (nodeTotals[d.source] || 0) + d.packets;
@@ -501,7 +477,6 @@ const processData = () => {
         node.total = nodeTotals[node.id] || 0;
     });
 
-    // Create links
     links.value = filteredData.map((d) => ({
         source: d.source,
         target: d.destination,
@@ -604,7 +579,6 @@ const moveTooltip = (event) => {
 const selectNode = (d) => {
     selectedNode.value = d;
 
-    // Highlight connected links
     linkElements.value
         .attr("stroke-opacity", (link) =>
             link.source.id === d.id || link.target.id === d.id
@@ -617,7 +591,6 @@ const selectNode = (d) => {
                 : getLinkWidth(link),
         );
 
-    // Highlight connected nodes
     nodeElements.value
         .attr("stroke", (node) => (node.id === d.id ? "#000" : "#fff"))
         .attr("stroke-width", (node) => (node.id === d.id ? 3 : 2));
@@ -681,7 +654,6 @@ const dragEnded = (event, d) => {
 onMounted(async () => {
     await loadPcapsFromDatabase();
     
-    // Set default selection to first available demo
     if (availableDemos.value.length > 0) {
         selectedDemo.value = availableDemos.value[0].path;
     }
@@ -698,7 +670,6 @@ onBeforeUnmount(() => {
     }
 });
 
-// Resize timeout
 const resizeTimeout = ref(null);
 </script>
 

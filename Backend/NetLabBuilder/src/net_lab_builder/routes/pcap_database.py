@@ -18,17 +18,13 @@ def save_pcap_to_database(user_id):
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id required'}), 400
 
-        # Get request data for metadata
         request_data = request.get_json() or {}
-        # Accept both 'creator' and 'user_id' as possible keys
         creator_in_body = request_data.get('creator') or request_data.get('user_id')
         if creator_in_body and creator_in_body != user_id:
             return jsonify({'status': 'error', 'message': 'User ID mismatch: not allowed to save for another user.'}), 403
 
-        # Get the pcap-merger container name for this user
         container_name = f"prototype-{user_id}-pcap-merger"
     
-        # Check if the container exists and is running
         try:
             result = subprocess.run(
                 ['docker', 'ps', '--filter', f'name={container_name}', '--format', '{{.Names}}'],
@@ -47,16 +43,13 @@ def save_pcap_to_database(user_id):
             logger.error(f"Error checking container status: {str(e)}")
             return jsonify({'status': 'error', 'message': 'Failed to check container status'}), 500
 
-        # Copy the merged PCAP file from the container to a temporary location
         temp_file_path = f"/tmp/merged_pcap_{user_id}.pcap"
         
         try:
-            # Copy the merged PCAP file from the container
             copy_result = subprocess.run([
                 'docker', 'cp', f'{container_name}:/pcap/merged.pcap', temp_file_path
             ], capture_output=True, text=True, check=True)
             
-            # Check if the file was copied successfully
             if not os.path.exists(temp_file_path):
                 return jsonify({
                     'status': 'error', 
@@ -69,13 +62,10 @@ def save_pcap_to_database(user_id):
 
         topology_info = request_data.get('topology_info', {})
         
-        # Generate metadata from the PCAP file
         metadata = generate_pcap_metadata(temp_file_path)
         
-        # Get connections from topology info or generate default
         connections = request_data.get('connections', [])
         
-        # Save to database
         pcap_id = pcap_service.save_pcap_file(
             creator=user_id,
             file_path=temp_file_path,
@@ -171,7 +161,6 @@ def download_pcap_from_db(pcap_id):
         if not pcap:
             return jsonify({'status': 'error', 'message': 'PCAP file not found'}), 404
         
-        # Check if PCAP data exists in database
         if not pcap.get('pcap_data'):
             return jsonify({'status': 'error', 'message': 'PCAP file data not found in database'}), 404
         
@@ -179,7 +168,6 @@ def download_pcap_from_db(pcap_id):
         from io import BytesIO
         pcap_data = pcap['pcap_data']
         if isinstance(pcap_data, str):
-            # If it's stored as string, decode it
             pcap_data = pcap_data.encode('latin-1')
         
         return send_file(
@@ -205,13 +193,11 @@ def get_pcap_json(pcap_id):
         if not pcap:
             return jsonify({'status': 'error', 'message': 'PCAP file not found'}), 404
         
-        # Get JSON data separately to avoid memory issues
         pcap_json = pcap_service.get_pcap_json_by_id(int(pcap_id))
         
         if not pcap_json:
             return jsonify({'status': 'error', 'message': 'PCAP JSON data not found in database'}), 404
         
-        # Parse and return the JSON data
         try:
             json_data = json.loads(pcap_json)
             return jsonify({
@@ -239,11 +225,9 @@ def get_pcap_connections(pcap_id):
         if not pcap:
             return jsonify({'status': 'error', 'message': 'PCAP file not found'}), 404
         
-        # Check if connections_json exists
         if not pcap.get('connections_json'):
             return jsonify({'status': 'error', 'message': 'PCAP connections data not found in database'}), 404
         
-        # Parse and return the connections data
         try:
             connections_data = json.loads(pcap['connections_json'])
             return jsonify({
@@ -266,7 +250,6 @@ def delete_pcap(pcap_id):
         if not pcap_id:
             return jsonify({'status': 'error', 'message': 'pcap_id required'}), 400
 
-        # Get user_id from request (for security)
         user_id = request.args.get('user_id')
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id required'}), 400
@@ -291,19 +274,15 @@ def delete_pcap(pcap_id):
 def generate_pcap_metadata(file_path):
     """Generate metadata from PCAP file using tcpdump"""
     try:
-        # Get basic file info
         file_size = os.path.getsize(file_path)
         file_stats = os.stat(file_path)
         
-        # Use tcpdump to analyze the PCAP file
         result = subprocess.run([
             'tcpdump', '-r', file_path, '-n', '-q', '-c', '1000'
         ], capture_output=True, text=True)
         
-        # Count packets (rough estimate)
         packet_count = len(result.stdout.splitlines())
         
-        # Extract protocols (basic analysis)
         protocols = set()
         for line in result.stdout.splitlines():
             if 'IP' in line:

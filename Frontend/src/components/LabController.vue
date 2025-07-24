@@ -434,14 +434,14 @@
                 <StepItem value="3">
                     <Step value="3">
                         <i class="pi pi-cloud step-icon"></i>
-                        Bereitstellen der Topologie
+                        Terminals
                     </Step>
                     <StepPanel value="3">
                         <div class="step-content">
                             <div class="step-header">
-                                <h3>Topologiebereitstellung</h3>
+                                <h3>Terminals</h3>
                                 <p>
-                                    Greifen Sie auf Ihre bereitgestellten Netzwerkknoten zu und verwalten Sie sie.
+                                    Hier können Sie auf die Terminals Ihrer aktiven Netzwerkknoten zugreifen, Befehle ausführen und die Netzwerkumgebung direkt steuern.
                                 </p>
                             </div>
 
@@ -689,7 +689,6 @@ export default {
         },
 
         resetStepper() {
-            // Check if user has existing nodes
             if (this.ownNodes.length > 0) {
                 this.confirm.require({
                     message: 'Möchten Sie wirklich alle Ihre bestehenden Knoten löschen und den Prozess neu starten?',

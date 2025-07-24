@@ -264,18 +264,15 @@ const availablePcaps = ref([
     }
 ]);
 
-// Pagination properties
 const rowsPerPage = ref(50);
 const first = ref(0);
 const currentPage = ref(0);
 
 const prettyPrint = (obj) => JSON.stringify(obj, null, 2);
 
-// Computed properties for filtering and statistics
 const filteredPackets = computed(() => {
     let filtered = packets.value;
 
-    // Filter by search term
     if (searchFilter.value) {
         const term = searchFilter.value.toLowerCase();
         filtered = filtered.filter(
@@ -287,7 +284,6 @@ const filteredPackets = computed(() => {
         );
     }
 
-    // Filter by selected protocols
     if (selectedProtocols.value.length > 0) {
         filtered = filtered.filter((packet) =>
             selectedProtocols.value.includes(packet.proto.toLowerCase()),
@@ -383,17 +379,14 @@ const copyPacketData = async (packet) => {
 const loadPcapData = async (filePath) => {
     loading.value = true;
     try {
-        // Check if this is a database PCAP (API endpoint)
         const isDatabasePcap = filePath.startsWith('/pcap/');
         
         let resp;
         if (isDatabasePcap) {
-            // For database PCAPs, get the JSON data
             const pcapId = filePath.split('/')[2]; // Get ID from /pcap/{id}/download
             const jsonResponse = await apiClient.get(`/pcap/${pcapId}/json`);
             
             if (jsonResponse.data.status === 'success') {
-                // Use the JSON data directly
                 const raw = jsonResponse.data.data;
                 
                 packets.value = raw.map((pkt) => {
@@ -501,14 +494,12 @@ const loadSelectedPcap = () => {
 // Load PCAPs from database
 const loadPcapsFromDatabase = async () => {
     try {
-        // Get user ID from store or localStorage
         const userId = localStorage.getItem('userId') || 'guest';
         
         const response = await apiClient.get(`/pcaps/${userId}`);
         const result = response.data;
         
         if (result.status === 'success' && result.pcaps) {
-            // Convert database PCAPs to the format expected by the dropdown
             const dbPcaps = result.pcaps.map(pcap => {
                 const createdDate = pcap.created_at ? new Date(pcap.created_at) : new Date();
                 const formattedDate = createdDate.toLocaleDateString('de-DE', {
@@ -532,7 +523,6 @@ const loadPcapsFromDatabase = async () => {
                 };
             });
             
-            // Add database PCAPs to the available options
             availablePcaps.value = [...availablePcaps.value, ...dbPcaps];
         }
     } catch (error) {
@@ -555,7 +545,6 @@ const extractTopProtocol = (protocolsStr) => {
         "data"
     ];
     
-    // Find the first non-lower protocol from the end
     for (let i = protocols.length - 1; i >= 0; i--) {
         const proto = protocols[i].toLowerCase();
         if (!lowerProtocols.includes(proto)) {
@@ -563,7 +552,6 @@ const extractTopProtocol = (protocolsStr) => {
         }
     }
     
-    // If all are lower protocols, return the last one
     return protocols[protocols.length - 1] || "";
 };
 
@@ -578,54 +566,44 @@ const formatTime = (timeStr) => {
             .replace(/\s+CEST$/, '') // Remove CEST timezone
             .replace(/\s+CET$/, ''); // Remove CET timezone
         
-        // Parse the cleaned time string
         const date = new Date(cleanedTimeStr);
         
-        // Check if the date is valid
         if (isNaN(date.getTime())) {
-            // If parsing fails, try to extract just the time part
             const timeMatch = timeStr.match(/(\d{1,2}:\d{2}:\d{2}\.\d+)/);
             if (timeMatch) {
                 return timeMatch[1];
             }
-            return timeStr; // Return original if all parsing fails
+            return timeStr;
         }
         
         return date.toLocaleTimeString('de-DE') + "." + 
                date.getMilliseconds().toString().padStart(3, "0");
     } catch (e) {
-        // If parsing fails, try to extract just the time part
         const timeMatch = timeStr.match(/(\d{1,2}:\d{2}:\d{2}\.\d+)/);
         if (timeMatch) {
             return timeMatch[1];
         }
-        return timeStr; // Return original if all parsing fails
+        return timeStr;
     }
 };
 
 onMounted(async () => {
-    // Check for topology query parameter
     const urlParams = new URLSearchParams(window.location.search);
     const topologyParam = urlParams.get('topology');
     
     if (topologyParam) {
-        // Find the PCAP that matches the topology parameter
         const matchingPcap = availablePcaps.value.find(pcap => pcap.name === topologyParam);
         if (matchingPcap) {
             selectedPcap.value = matchingPcap.path;
         } else {
-            // Fallback to default if no match found
             selectedPcap.value = availablePcaps.value[0].path;
         }
     } else {
-        // Set default PCAP selection
         selectedPcap.value = availablePcaps.value[0].path;
     }
     
-    // Load PCAPs from database (future feature)
     await loadPcapsFromDatabase();
     
-    // Load default PCAP data
     await loadPcapData(selectedPcap.value);
 });
 </script>

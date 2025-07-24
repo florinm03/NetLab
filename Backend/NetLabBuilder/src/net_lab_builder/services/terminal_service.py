@@ -21,7 +21,6 @@ class TerminalService:
         self.event_listener_thread = None
         self.should_stop_listener = False
         
-        # Start Docker event listener
         self._start_docker_event_listener()
 
     def get_own_nodes(self, user_id, host):
@@ -44,19 +43,15 @@ class TerminalService:
                 'terminals': []
             }
         
-        # Clean up any orphaned ttyd processes
         self._cleanup_orphaned_processes()
         
-        # Also clean up orphaned processes by name (fallback)
         self.cleanup_orphaned_processes_by_name(user_id)
         
         terminal_urls = []
         for container in containers:
             try:
-                # Check if we already have a ttyd process for this container
                 if container.name in self.container_ports:
                     port = self.container_ports[container.name]
-                    # Verify the process is still running
                     if self._is_ttyd_process_running(container.name, port):
                         terminal_urls.append({
                             'container_name': container.name,
@@ -66,10 +61,8 @@ class TerminalService:
                         })
                         continue
                     else:
-                        # Process is dead, remove from tracking
                         self._cleanup_container_session(container.name)
                 
-                # Start new ttyd process for this container
                 port = self._start_ttyd_for_container(container.name)
                 if port:
                     terminal_urls.append({
@@ -112,7 +105,6 @@ class TerminalService:
                 'message': f'Container {container_name} not found'
             }
         
-        # Check if we already have a session for this container
         if session_id in self.active_sessions.get(container_name, {}):
             port = self.active_sessions[container_name][session_id]
             if self._is_ttyd_process_running(container_name, port):
@@ -123,14 +115,11 @@ class TerminalService:
                     'session_id': session_id
                 }
             else:
-                # Process is dead, remove from tracking
                 del self.active_sessions[container_name][session_id]
         
-        # Check if container already has a ttyd process
         if container_name in self.container_ports:
             port = self.container_ports[container_name]
             if self._is_ttyd_process_running(container_name, port):
-                # Reuse existing port for this session
                 self.active_sessions[container_name][session_id] = port
                 return {
                     'status': 'success',
@@ -139,7 +128,6 @@ class TerminalService:
                     'session_id': session_id
                 }
         
-        # Start new ttyd process
         port = self._start_ttyd_for_container(container_name)
         if port:
             self.active_sessions[container_name][session_id] = port
@@ -158,16 +146,13 @@ class TerminalService:
     def _start_ttyd_for_container(self, container_name):
         """Start a ttyd process for a container and return the port"""
         try:
-            # Find an available port
             port = self.find_free_port()
             if not port:
                 logger.error(f"No available ports for container {container_name}")
                 return None
             
-            # Create process name for better tracking
             process_name = f"ttyd_{container_name.replace('-', '_')}"
             
-            # Start ttyd process with custom name
             cmd = [
                 'ttyd',
                 '--writable',
@@ -175,29 +160,24 @@ class TerminalService:
                 'docker', 'exec', '-it', container_name, '/bin/bash'
             ]
             
-            # Create a wrapper script to set process name
             wrapper_script = f"""#!/bin/bash
 exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_name} /bin/bash
 """
             
-            # Write wrapper script to temporary file
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
                 f.write(wrapper_script)
                 wrapper_path = f.name
             
-            # Make wrapper executable
             os.chmod(wrapper_path, 0o755)
             
-            # Start process using wrapper
             process = subprocess.Popen(
                 ['/bin/bash', wrapper_path],
                 stdout=subprocess.PIPE, 
                 stderr=subprocess.PIPE,
-                preexec_fn=os.setsid  # Create new process group
+                preexec_fn=os.setsid 
             )
             
-            # Store process info with name
             self.ttyd_processes[container_name] = {
                 'pid': process.pid,
                 'port': port,
@@ -223,10 +203,8 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
         pid = process_info['pid']
         
         try:
-            # Check if process is still running
             process = psutil.Process(pid)
             if process.is_running():
-                # Also verify the port is still in use
                 return self.is_port_in_use(port)
             else:
                 return False
@@ -242,7 +220,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
             wrapper_path = process_info.get('wrapper_path')
             
             try:
-                # Kill the process group
                 os.killpg(pid, 9)  # SIGKILL
                 logger.info(f"Killed ttyd process '{process_name}' for {container_name} (PID: {pid})")
             except (OSError, psutil.NoSuchProcess):
@@ -250,13 +227,11 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
             except Exception as e:
                 logger.warning(f"Error killing process {pid} for {container_name}: {str(e)}")
             
-            # Try to kill by process name as fallback
             try:
                 self._kill_processes_by_name(process_name)
             except Exception as e:
                 logger.debug(f"Could not kill processes by name '{process_name}': {str(e)}")
             
-            # Clean up wrapper script
             if wrapper_path and os.path.exists(wrapper_path):
                 try:
                     os.unlink(wrapper_path)
@@ -264,19 +239,16 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
                 except Exception as e:
                     logger.warning(f"Could not remove wrapper script {wrapper_path}: {str(e)}")
             
-            # Remove from tracking
             del self.ttyd_processes[container_name]
             if container_name in self.container_ports:
                 del self.container_ports[container_name]
             
-            # Clean up sessions
             if container_name in self.active_sessions:
                 del self.active_sessions[container_name]
 
     def _cleanup_orphaned_processes(self):
         """Clean up any ttyd processes that are no longer associated with running containers"""
         try:
-            # Get all running containers
             running_containers = set()
             try:
                 for container in self.client.containers.list():
@@ -285,13 +257,11 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
                 logger.warning(f"Could not get running containers list: {str(e)}")
                 return
             
-            # Check each tracked ttyd process
             containers_to_cleanup = []
             for container_name in list(self.ttyd_processes.keys()):
                 if container_name not in running_containers:
                     containers_to_cleanup.append(container_name)
             
-            # Clean up orphaned processes
             for container_name in containers_to_cleanup:
                 logger.info(f"Cleaning up orphaned ttyd process for {container_name}")
                 self._cleanup_container_session(container_name)
@@ -304,18 +274,15 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
         containers_to_cleanup = []
         
         if user_id:
-            # Clean up sessions for specific user
             for container_name in list(self.ttyd_processes.keys()):
                 if user_id in container_name:
                     containers_to_cleanup.append(container_name)
         else:
-            # Clean up all sessions
             containers_to_cleanup = list(self.ttyd_processes.keys())
         
         for container_name in containers_to_cleanup:
             self._cleanup_container_session(container_name)
         
-        # Also clean up orphaned processes by name
         self.cleanup_orphaned_processes_by_name(user_id)
 
     def generate_session_id(self):
@@ -341,7 +308,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
     def _kill_processes_by_name(self, process_name):
         """Kill all processes with a specific name"""
         try:
-            # Use psutil to find processes by name
             for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                 try:
                     if proc.info['name'] == process_name or (proc.info['cmdline'] and process_name in ' '.join(proc.info['cmdline'])):
@@ -355,7 +321,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
     def cleanup_orphaned_processes_by_name(self, user_id=None):
         """Clean up orphaned ttyd processes by searching for them by name"""
         try:
-            # Search for ttyd processes by name pattern
             ttyd_pattern = "ttyd_"
             if user_id:
                 ttyd_pattern += user_id.replace('-', '_')
@@ -392,7 +357,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
     def _docker_event_listener_worker(self):
         """Worker thread that listens for Docker container events"""
         try:
-            # Listen for container events
             for event in self.client.events(
                 filters={'type': 'container'},
                 decode=True
@@ -429,7 +393,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
                     logger.info(f"Container {container_name} stopped/removed, cleaning up ttyd process")
                     self._cleanup_container_session(container_name)
                 else:
-                    # Check if it's a container we should clean up by name pattern
                     self._cleanup_orphaned_processes_by_container_name(container_name)
                     
         except Exception as e:
@@ -438,7 +401,6 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
     def _cleanup_orphaned_processes_by_container_name(self, container_name):
         """Clean up orphaned ttyd processes for a specific container name"""
         try:
-            # Create the expected process name pattern
             process_name = f"ttyd_{container_name.replace('-', '_')}"
             
             killed_count = 0
@@ -465,5 +427,5 @@ exec -a "{process_name}" ttyd --writable -p {port} docker exec -it {container_na
             logger.info("Docker event listener stopped")
 
     def start_ttyd_process(self, container_name, port):
-        """Legacy method - kept for compatibility"""
+        """"""
         return self._start_ttyd_for_container(container_name) 

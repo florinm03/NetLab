@@ -85,7 +85,6 @@ export default {
     watch: {
         nodes: {
             handler() {
-                // Update container size when nodes change
                 this.$nextTick(() => {
                     this.updateContainerSize();
                 });
@@ -97,7 +96,6 @@ export default {
         updateContainerSize() {
             const container = this.$refs.graphContainer;
             if (container) {
-                // Use nextTick to ensure DOM is fully rendered
                 this.$nextTick(() => {
                     const newWidth = container.clientWidth;
                     const newHeight = container.clientHeight;
@@ -112,11 +110,10 @@ export default {
         },
         
         handleVisibilityChange() {
-            // When tab becomes visible again, update container size
             if (!document.hidden) {
                 setTimeout(() => {
                     this.updateContainerSize();
-                }, 100); // Small delay to ensure DOM is ready
+                }, 100);
             }
         },
         
@@ -126,7 +123,6 @@ export default {
                 this.visibilityObserver = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
-                            // Component is visible, update size
                             setTimeout(() => {
                                 this.updateContainerSize();
                             }, 50);
@@ -149,7 +145,6 @@ export default {
             const nodeCount = this.nodes.length;
             if (nodeCount === 0) return {};
             
-            // Calculate position based on topology type and node count
             const centerX = this.containerWidth / 2;
             const centerY = this.containerHeight / 2;
             const radius = Math.min(this.containerWidth, this.containerHeight) * 0.3;
@@ -241,7 +236,7 @@ export default {
                 return `${index + 1}`;
             }
             
-            // Extract the number from container name like "prototype-guest_18dbmi_node-guest_18dbmi_101"
+            // Extract the number from container name like:: "prototype-guest_18dbmi_node-guest_18dbmi_101"
             const match = containerName.match(/_(\d+)$/);
             if (match) {
                 return match[1];

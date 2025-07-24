@@ -34,7 +34,6 @@ class TopologyService:
     def start_topology(self, user_id, topology_name):
         """Start a new topology for a user"""
         try:
-            # Check if user already has a running topology
             containers = self.client.containers.list(
                 filters={'name': f'prototype-{user_id}'}
             )
@@ -47,11 +46,9 @@ class TopologyService:
                     'details': f'Found {len(containers)} running containers for this user'
                 }
 
-            # Construct the file path
             print(f"name:  {topology_name}")
             topology_script = f"../../topologies_by_userid/{topology_name}_by_user.py"
             
-            # Check if the topology script file exists
             script_path = os.path.join(os.path.dirname(__file__), topology_script)
             if not os.path.exists(script_path):
                 error_msg = f"Topology script not found: {script_path}"
@@ -64,7 +61,6 @@ class TopologyService:
                     'details': f'Available topologies: {[f.split("_by_user.py")[0] for f in os.listdir(os.path.join(os.path.dirname(__file__), "../topologies_by_userid")) if f.endswith("_by_user.py")]}'
                 }
             
-            # Execute the topology script in background
             cmd = ['python3', topology_script, user_id]
             
             process = subprocess.Popen(
@@ -74,13 +70,10 @@ class TopologyService:
                 cwd=os.path.dirname(__file__)
             )
 
-            # Give the process a moment to start and check for immediate errors
             import time
             time.sleep(2)
             
-            # Check if process has already terminated (indicating an error)
             if process.poll() is not None:
-                # Process has terminated, get the error output
                 stdout, stderr = process.communicate()
                 error_output = stderr.decode('utf-8') if stderr else "Unknown error"
                 logger.error(f"Topology script failed to start: {error_output}")
@@ -92,7 +85,6 @@ class TopologyService:
                     'details': 'Check server logs for more information'
                 }
             
-            # Process is running, return success
             logger.info(f"Topology script started successfully for user {user_id} with PID {process.pid}")
             return {
                 'status': 'success',
@@ -109,13 +101,11 @@ class TopologyService:
     def get_node_routing(self, node_id):
         """Get routing table for a specific node"""
         try:
-            # Find the container by node_id (exact match)
             containers = self.client.containers.list(
                 filters={'name': node_id}
             )
             
             if not containers:
-                # Try to find container by partial name match
                 logger.info(f"Exact match not found for {node_id}, trying partial match")
                 all_containers = self.client.containers.list()
                 matching_containers = [c for c in all_containers if node_id in c.name]
@@ -133,7 +123,6 @@ class TopologyService:
             container = containers[0]
             logger.info(f"Found container {container.name} for node {node_id}")
             
-            # Execute netstat -r command in the container
             result = container.exec_run('netstat -r')
             
             logger.info(f"netstat -r exit code: {result.exit_code}")
@@ -147,7 +136,6 @@ class TopologyService:
                     'message': error_msg
                 }
             
-            # Parse the routing table output
             routes = self.parse_netstat_output(result.output.decode('utf-8'))
             logger.info(f"Parsed routes: {routes}")
             
@@ -199,7 +187,6 @@ class TopologyService:
     def delete_node(self, user_id, node_id):
         """Delete a specific node from user's topology"""
         try:
-            # Find the container by node_id
             containers = self.client.containers.list(
                 filters={'name': node_id}
             )
@@ -212,10 +199,8 @@ class TopologyService:
             
             container = containers[0]
             
-            # Clean up ttyd session for this container
             self.terminal_service._cleanup_container_session(container.name)
             
-            # Stop and remove the container
             container.stop()
             container.remove()
             
@@ -233,7 +218,6 @@ class TopologyService:
     def clear_topology(self, user_id):
         """Clear all nodes for a user's topology"""
         try:
-            # Get all containers for this user
             containers = self.client.containers.list(
                 filters={'name': f'{user_id}'}
             )
@@ -247,7 +231,6 @@ class TopologyService:
                 except Exception as e:
                     logger.error(f"Failed to delete container {container.name}: {str(e)}")
             
-            # Clean up ttyd sessions for this user
             self.terminal_service.cleanup_all_sessions(user_id)
             
             logger.info(f"Cleared topology for user {user_id}, deleted {deleted_count} containers")

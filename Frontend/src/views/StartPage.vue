@@ -144,6 +144,7 @@
                         </div>
                         <h3>Topologie erstellen</h3>
                         <p>
+                            In Arbeit...
                             Erstellen Sie eigene Netzwerktopologien nach Ihren
                             Anforderungen.
                         </p>
@@ -180,7 +181,7 @@
             <div class="container">
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-number">4+</div>
+                        <div class="stat-number">4</div>
                         <div class="stat-label">Netzwerk-Topologien</div>
                     </div>
                     <div class="stat-item">
@@ -221,7 +222,7 @@ export default {
                 {
                     title: "Analysieren & Lernen",
                     description:
-                        "Analysieren Sie die Ergebnisse und erweitern Sie Ihr Netzwerkwissen (tbd.)",
+                        "Analysieren Sie die Ergebnisse und erweitern Sie Ihr Netzwerkwissen",
                 },
             ],
         };

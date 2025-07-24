@@ -70,17 +70,14 @@ def parse_pcap_connections_from_data(pcap_data: bytes) -> List[Dict]:
         List of connection dictionaries with source, destination, and packet count
     """
     try:
-        # Create temporary file for the PCAP data
         import tempfile
         with tempfile.NamedTemporaryFile(suffix='.pcap', delete=False) as temp_pcap:
             temp_pcap.write(pcap_data)
             temp_pcap_path = temp_pcap.name
         
         try:
-            # Parse the temporary PCAP file
             return parse_pcap_connections(temp_pcap_path)
         finally:
-            # Clean up temporary file
             if os.path.exists(temp_pcap_path):
                 try:
                     os.unlink(temp_pcap_path)
@@ -101,8 +98,6 @@ def convert_connections_to_graph_format(connections: List[Dict]) -> List[Dict]:
     Returns:
         List of connection dictionaries in graph format
     """
-    # The parsed connections are already in the correct format
-    # Just ensure all required fields are present
     return [
         {
             "source": conn.get("source", ""),

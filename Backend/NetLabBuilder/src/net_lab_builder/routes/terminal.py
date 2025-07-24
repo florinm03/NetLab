@@ -55,7 +55,7 @@ def init_ttyd_session():
             value=session_id,
             max_age=86400,
             httponly=True,
-            secure=False,  # TODO? True in production with HTTPS
+            secure=False,  # TODO True in production with HTTPS
             samesite='Lax'
         )
         return response

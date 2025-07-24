@@ -17,18 +17,15 @@ def convert_pcap_to_json(pcap_file_path):
         JSON string representation of the PCAP data or None if conversion fails
     """
     try:
-        # Check if tshark is available
         subprocess.run(['tshark', '--version'], capture_output=True, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         logger.error("tshark is not available. Please install Wireshark/tshark.")
         return None
     
     try:
-        # Create temporary file for the JSON output
         with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', delete=False) as temp_json:
             temp_json_path = temp_json.name
         
-        # Run tshark command to convert PCAP to JSON
         cmd = [
             'tshark', '-r', pcap_file_path, '-T', 'fields',
             '-e', 'frame.number',
@@ -43,7 +40,6 @@ def convert_pcap_to_json(pcap_file_path):
             '-E', 'header=y', '-E', 'separator=,', '-E', 'quote=d'
         ]
         
-        # Run tshark and pipe to Python for JSON conversion
         tshark_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -63,7 +59,6 @@ except Exception as e:
     sys.exit(1)
 '''
         
-        # Run Python script to convert CSV to JSON
         python_process = subprocess.Popen(
             ['python3', '-c', python_script],
             stdin=tshark_process.stdout,
@@ -72,7 +67,6 @@ except Exception as e:
             text=True
         )
         
-        # Get the output
         stdout, stderr = python_process.communicate()
         tshark_process.wait()
         
@@ -80,7 +74,6 @@ except Exception as e:
             logger.error(f"Error converting PCAP to JSON: {stderr}")
             return None
         
-        # Parse the JSON output
         try:
             json_data = json.loads(stdout)
             return json.dumps(json_data, indent=2)
@@ -92,7 +85,6 @@ except Exception as e:
         logger.error(f"Error during PCAP conversion: {str(e)}")
         return None
     finally:
-        # Clean up temporary file
         if 'temp_json_path' in locals() and os.path.exists(temp_json_path):
             try:
                 os.unlink(temp_json_path)
@@ -110,19 +102,16 @@ def convert_pcap_data_to_json(pcap_data):
         JSON string representation of the PCAP data or None if conversion fails
     """
     try:
-        # Create temporary file for the PCAP data
         with tempfile.NamedTemporaryFile(suffix='.pcap', delete=False) as temp_pcap:
             temp_pcap.write(pcap_data)
             temp_pcap_path = temp_pcap.name
         
-        # Convert the temporary PCAP file to JSON
         return convert_pcap_to_json(temp_pcap_path)
         
     except Exception as e:
         logger.error(f"Error converting PCAP data to JSON: {str(e)}")
         return None
     finally:
-        # Clean up temporary file
         if 'temp_pcap_path' in locals() and os.path.exists(temp_pcap_path):
             try:
                 os.unlink(temp_pcap_path)

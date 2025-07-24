@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 import sys
 import os
-# Add the parent directory to the path to import pcap_converter
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pcap_converter import convert_pcap_data_to_json
 from .pcap_parsing_service import PcapParsingService
@@ -64,7 +64,6 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor()
             
-            # Read PCAP file data
             pcap_data = None
             file_size = 0
             if os.path.exists(file_path):
@@ -74,7 +73,6 @@ class PcapDatabaseService:
             else:
                 file_size = metadata.get('file_size', 0)
             
-            # Convert PCAP data to JSON for analysis
             pcap_json = None
             if pcap_data:
                 logger.info("Converting PCAP data to JSON format...")
@@ -84,7 +82,6 @@ class PcapDatabaseService:
                 else:
                     logger.warning("PCAP to JSON conversion failed, continuing without JSON data")
             
-            # Extract real connections from PCAP data
             real_connections = []
             if pcap_data:
                 logger.info("Extracting connections from PCAP data...")
@@ -93,10 +90,8 @@ class PcapDatabaseService:
                     logger.info(f"Successfully extracted {len(real_connections)} connections from PCAP data")
                 else:
                     logger.warning("No connections found in PCAP data, using topology connections")
-                    # Fallback to topology connections if no real connections found
                     real_connections = connections
             
-            # Insert into single pcap_files table with all data including PCAP file and JSON
             insert_query = """
                 INSERT INTO pcap_files 
                 (creator, filename, file_path, pcap_data, pcap_json, file_size, topology_name, topology_type, 
@@ -107,7 +102,7 @@ class PcapDatabaseService:
             cursor.execute(insert_query, (
                 creator,
                 os.path.basename(file_path) if file_path else f"pcap_{creator}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pcap",
-                "database_stored",  # Indicate file is stored in database
+                "database_stored", 
                 pcap_data,
                 pcap_json,
                 file_size,
@@ -227,7 +222,6 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor()
             
-            # Delete from database
             delete_query = "DELETE FROM pcap_files WHERE id = %s AND creator = %s"
             cursor.execute(delete_query, (pcap_id, creator))
             
@@ -293,7 +287,6 @@ class PcapDatabaseService:
 
             cursor = self.connection.cursor(dictionary=True)
             
-            # Get basic statistics
             stats_query = """
                 SELECT 
                     COUNT(*) as total_files,
@@ -309,7 +302,6 @@ class PcapDatabaseService:
             cursor.execute(stats_query, (creator,))
             stats = cursor.fetchone()
             
-            # Get topology breakdown
             topology_query = """
                 SELECT topology_type, COUNT(*) as count
                 FROM pcap_files 

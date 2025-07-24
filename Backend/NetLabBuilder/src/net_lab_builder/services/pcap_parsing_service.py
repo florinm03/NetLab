@@ -3,7 +3,6 @@ from typing import List, Dict, Optional
 import sys
 import os
 
-# Add the parent directory to the path to import pcap_parser
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
     from ..pcap_parser import parse_pcap_connections_from_data, convert_connections_to_graph_format
@@ -33,7 +32,6 @@ class PcapParsingService:
         try:
             self.logger.info("Extracting connections from PCAP data...")
             
-            # Parse connections from PCAP data
             connections = parse_pcap_connections_from_data(pcap_data)
             
             if connections:
@@ -60,11 +58,9 @@ class PcapParsingService:
         try:
             self.logger.info(f"Extracting connections from PCAP file: {file_path}")
             
-            # Read PCAP file data
             with open(file_path, 'rb') as f:
                 pcap_data = f.read()
             
-            # Extract connections
             return self.extract_connections_from_pcap_data(pcap_data)
             
         except Exception as e:
@@ -82,10 +78,8 @@ class PcapParsingService:
             List of connection dictionaries in graph format
         """
         try:
-            # Extract connections from PCAP data
             connections = self.extract_connections_from_pcap_data(pcap_data)
             
-            # Convert to graph format
             graph_connections = convert_connections_to_graph_format(connections)
             
             self.logger.info(f"Converted {len(graph_connections)} connections to graph format")
@@ -106,10 +100,8 @@ class PcapParsingService:
             List of connection dictionaries in graph format
         """
         try:
-            # Extract connections from PCAP file
             connections = self.extract_connections_from_file(file_path)
             
-            # Convert to graph format
             graph_connections = convert_connections_to_graph_format(connections)
             
             self.logger.info(f"Converted {len(graph_connections)} connections to graph format from file")
@@ -129,8 +121,7 @@ class PcapParsingService:
         Returns:
             List of connection dictionaries in graph format
         """
-        # The parsed connections are already in the correct format
-        # Just ensure all required fields are present
+        
         return [
             {
                 "source": conn.get("source", ""),

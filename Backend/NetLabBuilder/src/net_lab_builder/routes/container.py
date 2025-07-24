@@ -33,10 +33,8 @@ def download_pcap(user_id):
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id required'}), 400
 
-        # Get the pcap-merger container name for this user
         container_name = f"prototype-{user_id}-pcap-merger"
     
-        # Check if the container exists and is running
         try:
             result = subprocess.run(
                 ['docker', 'ps', '--filter', f'name={container_name}', '--format', '{{.Names}}'],
@@ -56,16 +54,13 @@ def download_pcap(user_id):
             logger.error(f"Error checking container status: {str(e)}")
             return jsonify({'status': 'error', 'message': 'Failed to check container status'}), 500
 
-        # Copy the merged PCAP file from the container to a temporary location
         temp_file_path = f"/tmp/merged_pcap_{user_id}.pcap"
         
         try:
-            # Copy the merged PCAP file from the container
             copy_result = subprocess.run([
                 'docker', 'cp', f'{container_name}:/pcap/merged.pcap', temp_file_path
             ], capture_output=True, text=True, check=True)
             
-            # Check if the file was copied successfully
             if not os.path.exists(temp_file_path):
                 return jsonify({
                     'status': 'error', 
@@ -76,7 +71,6 @@ def download_pcap(user_id):
             logger.error(f"Error copying PCAP file: {str(e)}")
             return jsonify({'status': 'error', 'message': 'Failed to copy PCAP file from container'}), 500
 
-        # Send the file as a download
         try:
             return send_file(
                 temp_file_path,
@@ -88,7 +82,6 @@ def download_pcap(user_id):
             logger.error(f"Error sending file: {str(e)}")
             return jsonify({'status': 'error', 'message': 'Failed to send PCAP file'}), 500
         finally:
-            # Clean up the temporary file
             try:
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)

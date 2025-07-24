@@ -9,7 +9,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add src directory to Python path
 src_dir = str(Path(__file__).parent / "src")
 sys.path.append(src_dir)
 
@@ -22,29 +21,22 @@ def test_pcap_functionality():
     
     nc = None
     try:
-        # Create network controller
         nc = NetworkController()
         
-        # Create 2 nodes
         node1 = nc.create_node(base_name="test_node")
         node2 = nc.create_node(base_name="test_node")
         
-        # Create a network
         network = nc.create_network()
         
-        # Connect nodes to network
         nc.connect_node_to_network(network, node1, node2)
         
-        # Start tcpdump on both nodes
         print("Starting tcpdump on nodes...")
         node1.start_tcpdump()
         node2.start_tcpdump()
         
-        # Wait a bit for tcpdump to initialize
         print("Waiting for tcpdump to initialize...")
         time.sleep(2)
         
-        # Start pcap merge in a separate thread or process
         print("Starting PCAP merge...")
         import threading
         
@@ -57,7 +49,6 @@ def test_pcap_functionality():
         merge_thread = threading.Thread(target=run_pcap_merge, daemon=True)
         merge_thread.start()
         
-        # Let it run for a few seconds
         print("Running topology for 10 seconds...")
         time.sleep(10)
         
