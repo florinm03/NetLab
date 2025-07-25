@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  pcap-database:
+    build:
+      context: ./dockerfiles/pcap-database
+      dockerfile: Dockerfile
+    container_name: pcap-database
+    restart: unless-stopped
+    ports:
+      - "3307:3306"  # Use of fport 3307 to avoid conflicts with local MySQL
+    environment:
+      - MYSQL_ROOT_PASSWORD=pcap_root_password
+      - MYSQL_DATABASE=pcap_db
+      - MYSQL_USER=pcap_user
+      - MYSQL_PASSWORD=pcap_user_password
+    volumes:
+      - pcap_data:/var/lib/mysql
+      - pcap_storage:/pcap_storage
+      - ./dockerfiles/pcap-database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - netlab-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppcap_root_password"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  pcap_data:
+    driver: local
+  pcap_storage:
+    driver: local
+
+networks:
+  netlab-network:
+    external: true 

@@ -1,0 +1,158 @@
+/* color palette from <https://github.com/vuejs/theme> */
+:root {
+  --vt-c-white: #ffffff;
+  --vt-c-white-soft: #f8f8f8;
+  --vt-c-white-mute: #f2f2f2;
+
+  --vt-c-black: #181818;
+  --vt-c-black-soft: #222222;
+  --vt-c-black-mute: #282828;
+
+  --vt-c-indigo: #2c3e50;
+
+  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
+  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
+  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
+  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+
+  --vt-c-text-light-1: var(--vt-c-indigo);
+  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
+  --vt-c-text-dark-1: var(--vt-c-white);
+  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+}
+
+/* semantic color variables for this project */
+:root {
+  --color-background: var(--vt-c-white);
+  --color-background-soft: var(--vt-c-white-soft);
+  --color-background-mute: var(--vt-c-white-mute);
+
+  --color-border: var(--vt-c-divider-light-2);
+  --color-border-hover: var(--vt-c-divider-light-1);
+
+  --color-heading: var(--vt-c-text-light-1);
+  --color-text: var(--vt-c-text-light-1);
+
+  --section-gap: 160px;
+}
+
+/* NetLab Unified Color Palette */
+:root {
+  /* Primary Colors */
+  --nlb-primary: #667eea;
+  --nlb-primary-dark: #5a67d8;
+  --nlb-primary-light: #7c3aed;
+  
+  /* Secondary Colors */
+  --nlb-secondary: #764ba2;
+  --nlb-secondary-dark: #6b46c1;
+  --nlb-secondary-light: #8b5cf6;
+  
+  /* Accent Colors */
+  --nlb-accent: #007ad9;
+  --nlb-accent-dark: #005999;
+  --nlb-accent-light: #4299e1;
+  
+  /* Background Gradients */
+  --nlb-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --nlb-gradient-secondary: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --nlb-gradient-accent: linear-gradient(135deg, #4f46e5, #7c3aed);
+  
+  /* Text Colors */
+  --nlb-text-primary: #1e293b;
+  --nlb-text-secondary: #64748b;
+  --nlb-text-muted: #94a3b8;
+  --nlb-text-light: #ffffff;
+  
+  /* Border Colors */
+  --nlb-border-light: #e2e8f0;
+  --nlb-border-medium: #cbd5e0;
+  --nlb-border-dark: #a0aec0;
+  
+  /* Background Colors */
+  --nlb-bg-primary: #ffffff;
+  --nlb-bg-secondary: #f8fafc;
+  --nlb-bg-tertiary: #f1f5f9;
+  --nlb-bg-muted: #f7fafc;
+  
+  /* Status Colors */
+  --nlb-success: #48bb78;
+  --nlb-success-light: #c6f6d5;
+  --nlb-success-dark: #22543d;
+  
+  --nlb-warning: #f6ad55;
+  --nlb-warning-light: #fed7d7;
+  --nlb-warning-dark: #c53030;
+  
+  --nlb-error: #ef4444;
+  --nlb-error-light: #fed7d7;
+  --nlb-error-dark: #dc2626;
+  
+  --nlb-info: #4299e1;
+  --nlb-info-light: #bee3f8;
+  --nlb-info-dark: #2b6cb0;
+  
+  /* Protocol Colors */
+  --nlb-protocol-http: #1d4ed8;
+  --nlb-protocol-http-bg: #dbeafe;
+  --nlb-protocol-transport: #7c3aed;
+  --nlb-protocol-transport-bg: #f3e8ff;
+  --nlb-protocol-dns: #16a34a;
+  --nlb-protocol-dns-bg: #dcfce7;
+  --nlb-protocol-network: #d97706;
+  --nlb-protocol-network-bg: #fef3c7;
+  --nlb-protocol-security: #dc2626;
+  --nlb-protocol-security-bg: #fecaca;
+  --nlb-protocol-other: #64748b;
+  --nlb-protocol-other-bg: #f1f5f9;
+}
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--vt-c-black);
+    --color-background-soft: var(--vt-c-black-soft);
+    --color-background-mute: var(--vt-c-black-mute);
+
+    --color-border: var(--vt-c-divider-dark-2);
+    --color-border-hover: var(--vt-c-divider-dark-1);
+
+    --color-heading: var(--vt-c-text-dark-1);
+    --color-text: var(--vt-c-text-dark-2);
+  }
+} */
+
+*,
+*::before,
+*::after {
+  /* box-sizing: border-box; */
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+
+  transition:
+    color 0.5s,
+    background-color 0.5s;
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

@@ -1,0 +1,102 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="50%" style="stop-color:#764ba2"/>
+      <stop offset="100%" style="stop-color:#5a3d7a"/>
+    </linearGradient>
+    
+    <!-- Node gradients for 3D effect -->
+    <radialGradient id="nodeGradient1" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9"/>
+      <stop offset="70%" style="stop-color:#a8edea;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:1"/>
+    </radialGradient>
+    
+    <radialGradient id="nodeGradient2" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9"/>
+      <stop offset="70%" style="stop-color:#ffd89b;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#19547b;stop-opacity:1"/>
+    </radialGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners -->
+  <rect width="64" height="64" rx="12" fill="url(#bgGradient)" filter="url(#shadow)"/>
+  
+  <!-- Network topology in center -->
+  <g transform="translate(10, 12)">
+    <!-- Connection lines (subtle) -->
+    <line x1="12" y1="20" x2="22" y2="10" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="10" x2="32" y2="20" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="12" y1="20" x2="22" y2="30" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="30" x2="32" y2="20" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="10" x2="22" y2="30" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Animated data flow -->
+    <g opacity="0.8">
+      <circle r="1.5" fill="#ffffff">
+        <animateMotion dur="2s" repeatCount="indefinite">
+          <path d="M 12,20 Q 17,15 22,10"/>
+        </animateMotion>
+      </circle>
+      <circle r="1.5" fill="#ffffff">
+        <animateMotion dur="2s" repeatCount="indefinite" begin="0.7s">
+          <path d="M 22,10 Q 27,15 32,20"/>
+        </animateMotion>
+      </circle>
+      <circle r="1.5" fill="#ffffff">
+        <animateMotion dur="2s" repeatCount="indefinite" begin="1.3s">
+          <path d="M 12,20 Q 17,25 22,30"/>
+        </animateMotion>
+      </circle>
+    </g>
+    
+    <!-- Network nodes -->
+    <circle cx="12" cy="20" r="5" fill="url(#nodeGradient1)" filter="url(#glow)"/>
+    <circle cx="22" cy="10" r="5" fill="url(#nodeGradient2)" filter="url(#glow)"/>
+    <circle cx="32" cy="20" r="5" fill="url(#nodeGradient1)" filter="url(#glow)"/>
+    <circle cx="22" cy="30" r="5" fill="url(#nodeGradient2)" filter="url(#glow)"/>
+    
+    <!-- Node centers (highlights) -->
+    <circle cx="12" cy="20" r="2" fill="rgba(255,255,255,0.9)"/>
+    <circle cx="22" cy="10" r="2" fill="rgba(255,255,255,0.9)"/>
+    <circle cx="32" cy="20" r="2" fill="rgba(255,255,255,0.9)"/>
+    <circle cx="22" cy="30" r="2" fill="rgba(255,255,255,0.9)"/>
+  </g>
+  
+  <!-- Small lab flask in corner -->
+  <g transform="translate(42, 42)">
+    <!-- Flask outline -->
+    <path d="M 4,1 L 8,1 L 8,4 L 12,12 L 0,12 Z" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.8)" 
+          stroke-width="1.5" 
+          stroke-linejoin="round"/>
+    <!-- Flask liquid -->
+    <path d="M 2,10 L 10,10 L 8,6 L 4,6 Z" 
+          fill="rgba(168,237,234,0.8)"/>
+    <!-- Single bubble -->
+    <circle cx="6" cy="8" r="0.8" fill="rgba(255,255,255,0.9)">
+      <animate attributeName="cy" values="8;6;8" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Subtle corner accent -->
+  <circle cx="54" cy="10" r="1.5" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="10" cy="54" r="1" fill="rgba(255,255,255,0.2)"/>
+</svg>

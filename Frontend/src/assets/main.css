@@ -1,0 +1,50 @@
+@import "./base.css";
+
+/* Force light mode and disable dark mode detection */
+:root {
+    color-scheme: light only;
+}
+
+/* Override any dark mode styles */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: light only;
+    }
+}
+
+/* Force light theme variables */
+:root {
+    --p-color-scheme: light;
+}
+
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    padding: 1rem;
+    background: #f0f0f0;
+}
+
+.card {
+    display: flex;
+    justify-content: space-between;
+    box-shadow:
+        -4px 0 8px 0 rgba(0, 0, 0, 0.1),
+        4px 0 8px 0 rgba(0, 0, 0, 0.1),
+        0 4px 8px 0 rgba(0, 0, 0, 0.2),
+        0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1vw;
+    background-color: #fff;
+    width: auto;
+}
