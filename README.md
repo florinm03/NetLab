@@ -4,8 +4,8 @@ NetLab is a web-based network topology simulator that allows users to create, vi
 
 ## Features
 
-- **Interactive Topology Creation:** Easily create and configure network topologies such as rings, stars, and meshes.
-- **Real-time Visualization:** View your network topology in real-time with a dynamic and interactive graph.
+- **Interactive Topology Creation:** Easily create and configure network topologies such as rings, stars, trees and meshes.
+- **Real-time Visualization:** View your network topology in real-time with a dynamic graph.
 - **Embedded Terminal:** Access and interact with the command line of each node in your topology directly from your browser.
 - **PCAP Analysis:** Capture and analyze network traffic with the integrated PCAP viewer.
 - **Extensible Architecture:** The project is designed to be easily extensible with new topologies and features.
@@ -45,7 +45,7 @@ NetLab is a web-based network topology simulator that allows users to create, vi
 2.  **Install frontend dependencies:**
 
     ```bash
-    cd Prototyp/NetLabFrontend
+    cd Frontend
     npm install
     ```
 
@@ -53,22 +53,34 @@ NetLab is a web-based network topology simulator that allows users to create, vi
 
     ```bash
     cd ../Backend/NetLabBuilder
+    python3 -m venv nlb-venv
+    source nlb-venv/bin/activate
     pip install -r requirements.txt
     ```
 
 ### Running the Application
 
-1.  **Start the backend server:**
+1.  **Make sure Docker is running and start the database container:**
 
     ```bash
-    cd Prototyp/Backend/NetLabBuilder
+    cd Backend/NetLabBuilder
+    chmod +x start_pcap_database.sh
+    ./start_pcap_database.sh
     ```
 
-2.  **Start the frontend development server:**
+2.  **Start the backend server:**
 
     ```bash
-    cd Prototyp/NetLabFrontend
+    cd Backend/NetLabBuilder
+    source nlb-venv/bin/activate
+    python src/net_lab_builder/app.py
+    ```
+
+3.  **Start the frontend development server:**
+
+    ```bash
+    cd Frontend
     npm run dev
     ```
 
-3.  **Open your browser** and navigate to the URL provided by the Vite development server (usually `http://localhost:5173`).
+
