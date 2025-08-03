@@ -501,7 +501,7 @@ const loadPcapsFromDatabase = async () => {
         
         if (result.status === 'success' && result.pcaps) {
             const dbPcaps = result.pcaps.map(pcap => {
-                const createdDate = pcap.created_at ? new Date(pcap.created_at) : new Date();
+                const createdDate = pcap.created_at ? new Date(pcap.created_at + 'Z') : new Date();
                 const formattedDate = createdDate.toLocaleDateString('de-DE', {
                     year: 'numeric',
                     month: '2-digit',

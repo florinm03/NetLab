@@ -14,6 +14,7 @@ services:
       - MYSQL_DATABASE=pcap_db
       - MYSQL_USER=pcap_user
       - MYSQL_PASSWORD=pcap_user_password
+      - TZ=UTC
     volumes:
       - pcap_data:/var/lib/mysql
       - pcap_storage:/pcap_storage

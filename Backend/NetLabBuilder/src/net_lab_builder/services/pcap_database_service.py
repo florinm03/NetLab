@@ -22,7 +22,8 @@ class PcapDatabaseService:
             'password': 'pcap_user_password', # TODO env
             'database': 'pcap_db',
             'charset': 'utf8mb4',
-            'autocommit': True
+            'autocommit': True,
+            'time_zone': '+00:00'
         }
         self.connection = None
         self.pcap_parsing_service = PcapParsingService()

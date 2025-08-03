@@ -198,7 +198,7 @@ export default {
 
         formatDate(dateString) {
             if (!dateString) return 'Unbekannt';
-            const date = new Date(dateString);
+            const date = new Date(dateString + 'Z');
             return date.toLocaleDateString('de-DE', {
                 year: 'numeric',
                 month: '2-digit',
