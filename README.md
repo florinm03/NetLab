@@ -2,6 +2,22 @@
 
 NetLab is a web-based network topology simulator that allows users to create, visualize, and interact with virtual network environments. It combines a Vue.js frontend with a Python Flask backend to provide a seamless and interactive experience for network experimentation and learning.
 
+## Screenshots
+<table>
+  <tr>
+    <td><img src="Pictures/Homepage.png" alt="Homepage" /></td>
+    <td><img src="Pictures/Controller.png" alt="Controller" /></td>
+  </tr>
+  <tr>
+    <td><img src="Pictures/Controller2.png" alt="Controller 2" /></td>
+    <td><img src="Pictures/Controller3.png" alt="Controller 3" /></td>
+  </tr>
+  <tr>
+    <td><img src="Pictures/Graph.png" alt="Graph" /></td>
+    <td><img src="Pictures/PCAP_Table.png" alt="PCAP Table" /></td>
+  </tr>
+</table>
+
 ## Credits
 
 The backend of this project builds upon the work of **[JanBdot](https://github.com/JanBdot/NetLabBuilder)** in the NetLabBuilder project. We extend our gratitude for the foundational network topology and container management infrastructure that made this project possible.
